@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from pathlib import Path
-from clean_engineer import HAL9001DataCleaner
+from utils.clean_engineer import HAL9001DataCleaner
 import os
 
 class TextDataLoader():
@@ -55,7 +55,7 @@ class TextDataLoader():
     def _transform_features(self):
 
         # init transformed_features and fill with transformed data...
-		cleaner = HAL9001DataCleaner(self.orig_data)
+        cleaner = HAL9001DataCleaner(self.orig_data)
         self.transformed_features = cleaner.run_all()
         self.transformed_features.dropna(inplace=True)
 

@@ -1,7 +1,7 @@
 # General imports
 #import cv2
 import numpy as np
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from tensorflow.keras.utils import plot_model
@@ -32,8 +32,8 @@ include_image = False
 use_scaling = True
 
 # data paths
-train_text_path = r'.\src_data\train.csv'
-train_images_folder = r'.\src_data\train_profile_images'
+train_text_path = r'./src_data/train.csv'
+train_images_folder = r'./src_data/train_profile_images'
 log_folder = 'logs'
 
 
@@ -44,7 +44,7 @@ def main():
     # Create log folder if does not exist
     if not Path(log_folder).exists():
         os.mkdir(log_folder)
-    
+
 
     # Images loader
     images_loader = ImagesLoader(src_folder_path = train_images_folder)
@@ -71,7 +71,7 @@ def main():
 
     # -- Preare data for model --
     # Will use a dict to associate the corresponding data to the right input in the model (Image vs Features)
-    
+
     # TODO DEBUG using scaler for tests
     if use_scaling:
         sc_x = StandardScaler()
@@ -96,7 +96,7 @@ def main():
     train_likes = np.array(train_likes)
     if use_scaling:
         train_likes = sc_y.fit_transform(train_likes.reshape(-1, 1))
-   
+
     train_X = {IMAGE_INPUT_NAME: train_images, # Images
                TEXT_FEATURES_INPUT_NAME: train_features} # Encoded Text Features
     train_y = {OUTPUT_NAME: train_likes} # Likes
