@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from pathlib import Path
+from clean_engineer import HAL9001DataCleaner
 import os
 
 class TextDataLoader():
@@ -12,15 +13,15 @@ class TextDataLoader():
     Will load the data in pandas DataFrame. Orignial data will be stored in a DataFrame and new
     encoded/transfored featrures will be stored in a new DataFrame. Both data frames can be accessed by the
     client. TODO?
-    
+
     Parameters:
     ----------
     src_csv_file_path : str
         Full path of the src csv file.
-        
+
     Example:
     --------
-    
+
     >>> text_data_loader = TextDataLoader(src_csv_file_path = train_text_path)
     >>> text_data_loader.get_orig_data_for_profile_id(profile_id)
     AL85S14OMDPF01I9,Mf9vfld4Vfe,,Set,Verified,db1a2c,eaf0f2,e70409,False,39600.0,,Enabled,en,Thu Nov 27 05:24:59 +0000 2008,Sydney,95763,4289,30809,873,business,14.792,1.5761,AL85S14OMDPF01I9.png,2815
@@ -37,10 +38,10 @@ class TextDataLoader():
         if not Path(src_csv_file_path).exists():
             err_message = 'Src csv file not found! {:}'.format(src_csv_file_path)
             raise Exception(err_message)
-        
+
         # Load images at initialization
         self._load_text_data_from_file()
-        
+
         # Transform, encode, add new features...
         # TODO
         self._transform_features()
@@ -52,22 +53,22 @@ class TextDataLoader():
 
 
     def _transform_features(self):
-        # TODO:
-        # init transformed_features and fill with transformed data...
 
-        self.transformed_features = self.orig_data.copy()
+        # init transformed_features and fill with transformed data...
+		cleaner = HAL9001DataCleaner(self.orig_data)
+        self.transformed_features = cleaner.run_all()
         self.transformed_features.dropna(inplace=True)
-        
+
         # TODO TESTS only
-        self.transformed_features = self.transformed_features[['Id',
-                                                               'Avg Daily Profile Clicks',
-                                                               #'Profile_age',
-                                                               'Avg Daily Profile Visit Duration in seconds',
-                                                               'Num of Followers',
-                                                               'Num of People Following',
-                                                               'Num of Status Updates',
-                                                               'Num of Direct Messages',
-                                                               'Num of Profile Likes']]
+#         self.transformed_features = self.transformed_features[['Id',
+#                                                                'Avg Daily Profile Clicks',
+#                                                                #'Profile_age',
+#                                                                'Avg Daily Profile Visit Duration in seconds',
+#                                                                'Num of Followers',
+#                                                                'Num of People Following',
+#                                                                'Num of Status Updates',
+#                                                                'Num of Direct Messages',
+#                                                                'Num of Profile Likes']]
 
         #self.transformed_features['Test'] = self.transformed_features['Num of Profile Likes']
 
@@ -77,8 +78,8 @@ class TextDataLoader():
 #        max_num_likes = self.transformed_features['Num of Profile Likes'].max()
 #        scaler = 100
 #        self.transformed_features['Num of Profile Likes'] = ((self.transformed_features['Num of Profile Likes']-min_num_likes)/(max_num_likes-min_num_likes))*scaler
- 
- 
+
+
         self.are_features_transformed = True
 
 
