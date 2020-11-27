@@ -1,0 +1,4 @@
+Version,Date,code git version,comments,score on kaggle
+v0, 26-11-2020,b994100b1de2d5d674dbcc0d327fbb60a6422b85,"Random Forest (RandState 42); Num Like scaled based on min/max scaler",2.45161
+v1, 27-11-2020,cbcb5a18f4513dc436ae60d94982c975b45d3f89,"Random Forest (RandState 42); Num Like scaled with sklearn Power Transform CoxBox",2.10281
+
