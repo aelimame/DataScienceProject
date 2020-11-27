@@ -1,2 +1,10 @@
 
 *.pyc
+*.ipynb
+venv/*
+
+# VS-Code
+settings.json
+
+# OS X
+.DS_Store
