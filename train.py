@@ -15,31 +15,74 @@ from pathlib import Path
 # Project imports
 from utils.images_loader import ImagesLoader
 from utils.text_data_loader import TextDataLoader
+from utils.utilities import plot_history
+from utils.utilities import rmsle
 from model import TextOnlyModel, ImageAndTextModel
-from model import IMAGE_INPUT_NAME, TEXT_FEATURES_INPUT_NAME, OUTPUT_NAME
 
+# Names for acces to data in Dict (to be used with model inputs/output for better referencing)
+IMAGE_INPUT_NAME = 'image'
+TEXT_FEATURES_INPUT_NAME = 'text_features'
+OUTPUT_NAME = 'likes'
 
 # GPU specific
 os.environ['CUDA_VISIBLE_DEVICES']='1'
 
 
-# Hyper-params TODO move to json file? for better modularity and tracking
+# params
+use_scaling = True
+include_images = True
+
+# Model Hyper-params TODO move to json file? for better modularity and tracking
 learning_rate = 0.001
 training_batch_size = 128 #32
-n_epochs = 200
-include_image = False
-# DEBUG/TESTS
-use_scaling = True
+n_epochs = 10
+
 
 # data paths
 train_text_path = r'./src_data/train.csv'
 train_images_folder = r'./src_data/train_profile_images'
+test_text_path = r'./src_data/test.csv'
+test_images_folder = r'./src_data/test_profile_images'
 log_folder = 'logs'
+
+
+# Method to help load X and y from data loaders TODO move to utilities
+def load_x_y_from_loaders(images_loader, text_data_loader, profiles_ids_list=None, include_images=False):
+    likes = None
+
+    # If profiles_ids_list not provided fetch all profiles_ids in text data loader
+    if profiles_ids_list is None:
+        profiles_ids_list = text_data_loader.get_transformed_features()['Id'].values
+
+    # Retunr X and y
+    images = np.array([images_loader.get_image_data_for_profile_id(profile_id) for profile_id in profiles_ids_list])
+    features = text_data_loader.get_transformed_features()
+    features = features[features['Id'].isin(profiles_ids_list)]
+    if 'Num of Profile Likes' in features:
+        likes = features['Num of Profile Likes']
+        likes = np.array(likes)
+        features = features.drop(columns =['Id', 'Num of Profile Likes'])
+    else:
+        features = features.drop(columns =['Id'])
+    features = np.array(features)
+    
+    if include_images:
+        X = {IMAGE_INPUT_NAME: images, # Images
+             TEXT_FEATURES_INPUT_NAME: features} # Transformed Text Features
+    else:
+        X = {TEXT_FEATURES_INPUT_NAME: features} # Transformed Text Features
+    
+    if likes is not None:
+        y = {OUTPUT_NAME: likes} # Likes
+        return X, y
+    
+    return X
+
 
 
 def main():
     # See devices and if we have a GPU
-    print(tf.config.experimental.list_physical_devices())
+#    print(tf.config.experimental.list_physical_devices())
 
     # Create log folder if does not exist
     if not Path(log_folder).exists():
@@ -54,95 +97,64 @@ def main():
     # Text data loader
     text_data_loader = TextDataLoader(src_csv_file_path = train_text_path)
 
-    # TEST Get and profile by its ID
-#    profile_id = '00NJOGS399G79OP3'
-#    image_data = images_loader.get_image_data_for_profile_id(profile_id)
-#    text_data = text_data_loader.get_orig_data_for_profile_id(profile_id)
-    # Print data for this profile
-#    print(text_data)
-    # Show profile image
-#    plt.imshow(image_data)
-#    plt.show()
 
     # -- Split ids to train/valid --
-    #all_profiles_ids_list = text_data_loader.get_orig_data()['Id'].values
     all_profiles_ids_list = text_data_loader.get_transformed_features()['Id'].values
+
     train_profiles_ids, valid_profiles_ids = train_test_split(all_profiles_ids_list, test_size = .2, random_state=42, shuffle=True)
 
-    # -- Preare data for model --
+    # -- Preare data for model  Train/Valid--
     # Will use a dict to associate the corresponding data to the right input in the model (Image vs Features)
 
-    # TODO DEBUG using scaler for tests
+    # TODO DEBUG using scaling for tests
     if use_scaling:
         sc_x = StandardScaler()
         sc_y = StandardScaler()
 
     # - Train: use train_profiles_ids
-    train_images = np.array([images_loader.get_image_data_for_profile_id(profile_id) for profile_id in train_profiles_ids])
-
-# TODO gives errors:    train_features = np.array([text_data_loader.get_transformed_features_for_profile_id(profile_id) for profile_id in train_profiles_ids])
-    train_features = []
-    for idx, profile_id in enumerate(train_profiles_ids, start=0):
-        train_features += [text_data_loader.get_transformed_features_for_profile_id(profile_id).drop(columns =['Id', 'Num of Profile Likes']).values[0]]
-        #train_features += [text_data_loader.get_transformed_features_for_profile_id(profile_id).drop(columns =['Id']).values[0]]
-    train_features = np.array(train_features)
+    train_X, train_y = load_x_y_from_loaders(images_loader=images_loader,
+                                            text_data_loader=text_data_loader,
+                                            profiles_ids_list=train_profiles_ids,
+                                            include_images=include_images)
     if use_scaling:
-        train_features = sc_x.fit_transform(train_features)
-
-# TODO gives errors:    train_likes = np.array([text_data_loader.get_transformed_features_for_profile_id(profile_id)['Num of Profile Likes'] for profile_id in train_profiles_ids])
-    train_likes = []
-    for idx, profile_id in enumerate(train_profiles_ids, start=0):
-        train_likes += [text_data_loader.get_transformed_features_for_profile_id(profile_id)['Num of Profile Likes'].values[0]]
-    train_likes = np.array(train_likes)
-    if use_scaling:
-        train_likes = sc_y.fit_transform(train_likes.reshape(-1, 1))
-
-    train_X = {IMAGE_INPUT_NAME: train_images, # Images
-               TEXT_FEATURES_INPUT_NAME: train_features} # Encoded Text Features
-    train_y = {OUTPUT_NAME: train_likes} # Likes
+        # Fit and Transform on Train
+        train_X[TEXT_FEATURES_INPUT_NAME] = sc_x.fit_transform(train_X[TEXT_FEATURES_INPUT_NAME])
+        train_y[OUTPUT_NAME] = sc_y.fit_transform(train_y[OUTPUT_NAME].reshape(-1, 1))
 
     # - Valid: use valid_profiles_ids
-    valid_images = np.array([images_loader.get_image_data_for_profile_id(profile_id) for profile_id in valid_profiles_ids])
-# TODO gives errors:   valid_features = np.array([text_data_loader.get_transformed_features_for_profile_id(profile_id) for profile_id in valid_profiles_ids])
-    valid_features = []
-    for idx, profile_id in enumerate(valid_profiles_ids, start=0):
-        valid_features += [text_data_loader.get_transformed_features_for_profile_id(profile_id).drop(columns =['Id', 'Num of Profile Likes']).values[0]]
-        #valid_features += [text_data_loader.get_transformed_features_for_profile_id(profile_id).drop(columns =['Id']).values[0]]
-    valid_features = np.array(valid_features)
-    if use_scaling:
-        valid_features = sc_x.transform(valid_features)
+    valid_X, valid_y = load_x_y_from_loaders(images_loader=images_loader,
+                                text_data_loader=text_data_loader,
+                                profiles_ids_list=valid_profiles_ids,
+                                include_images=include_images)
 
-# TODO gives errors :  valid_likes = np.array([text_data_loader.get_transformed_features_for_profile_id(profile_id)['Num of Profile Likes'] for profile_id in valid_profiles_ids])
-    valid_likes = []
-    for idx, profile_id in enumerate(valid_profiles_ids, start=0):
-        valid_likes += [text_data_loader.get_transformed_features_for_profile_id(profile_id)['Num of Profile Likes'].values[0]]
-    valid_likes = np.array(valid_likes)
     if use_scaling:
-        valid_likes = sc_y.transform(valid_likes.reshape(-1, 1))
+        # Transform only on Valid
+        valid_X[TEXT_FEATURES_INPUT_NAME] = sc_x.transform(valid_X[TEXT_FEATURES_INPUT_NAME])
+        valid_y[OUTPUT_NAME] = sc_y.transform(valid_y[OUTPUT_NAME].reshape(-1, 1))
 
-    valid_X = {IMAGE_INPUT_NAME: valid_images, # Images
-               TEXT_FEATURES_INPUT_NAME: valid_features} # Encoded Text Features
-    valid_y = {OUTPUT_NAME: valid_likes} # Likes
 
 
     # -- Prepare model --
     image_height = images_loader.image_shape[0]
     image_width = images_loader.image_shape[1]
     image_nbr_channels = images_loader.image_shape[2]
-    nbr_text_features = train_features.shape[1] # TODO text_data_loader.get_nbr_features()
+    nbr_text_features = train_X[TEXT_FEATURES_INPUT_NAME].shape[1] # TODO text_data_loader.get_nbr_features()
 
     # Text and Image model
-    if include_image:
+    if include_images:
         model = ImageAndTextModel(image_height = image_height,
                                 image_width = image_width,
                                 image_nbr_channels = image_nbr_channels,
-                                nbr_text_features = nbr_text_features)
+                                nbr_text_features = nbr_text_features,
+                                image_input_name=IMAGE_INPUT_NAME,
+                                text_features_input_name=TEXT_FEATURES_INPUT_NAME,
+                                output_name=OUTPUT_NAME)
 
     # Text only model
     else :
-        X= train_X[TEXT_FEATURES_INPUT_NAME]
-        y= train_y[OUTPUT_NAME]
-        model = TextOnlyModel(nbr_text_features = nbr_text_features)
+        model = TextOnlyModel(nbr_text_features = nbr_text_features,
+                              text_features_input_name=TEXT_FEATURES_INPUT_NAME,
+                              output_name=OUTPUT_NAME)
 
     # Model summary
     model.summary() # TODO model summary to file
@@ -161,51 +173,60 @@ def main():
                      epochs=n_epochs,
                      verbose=1)
 
+    # -- Plot train/valid learning curves error/loss
+    plot_history(hist)
+
     # -- DEBUG linear regression on text features --
     from sklearn.linear_model import LinearRegression
     X= train_X[TEXT_FEATURES_INPUT_NAME]
     y= train_y[OUTPUT_NAME]
     reg = LinearRegression().fit(X, y)
-    print(reg.score(X, y))
+    print('Linear reg score: {:}'.format(reg.score(X, y)))
     # -- DEBUG --
 
-    # -- Plot train/valid learning curves error/loss
-    # TODO Move method outside (in utils). Can also use Keras callback for checkpoints and tensorboard logging...
-    def plot_history(history):
-        err = history.history['mean_squared_error']
-        val_err = history.history['val_mean_squared_error']
-        err2 = history.history['mean_squared_logarithmic_error']
-        val_err2 = history.history['val_mean_squared_logarithmic_error']
-        loss = history.history['loss']
-        val_loss = history.history['val_loss']
-        x = range(1, len(err) + 1)
+    # -- Random Forest --
+    from sklearn.metrics import auc, accuracy_score, confusion_matrix, mean_squared_error
+    import xgboost as xgb
 
-        plt.figure(figsize=(16, 5))
-        plt.subplot(1, 3, 1)
-        plt.plot(x, loss, 'b', label='Training loss')
-        plt.plot(x, val_loss, 'r', label='Validation loss')
-        plt.title('Training and validation loss')
-        #plt.ylim(-0.5, 3)
-        plt.legend()
+    train_values_X= train_X[TEXT_FEATURES_INPUT_NAME]
+    train_values_y= train_y[OUTPUT_NAME]
 
-        plt.subplot(1, 3, 2)
-        plt.plot(x, err, 'b', label='Training mean_squared_error')
-        plt.plot(x, val_err, 'r', label='Validation mean_squared_error')
-        plt.title('Training and validation mean_squared_error')
-        plt.legend()
+    valid_values_X= valid_X[TEXT_FEATURES_INPUT_NAME]
+    valid_values_y= valid_y[OUTPUT_NAME]
 
-        plt.subplot(1, 3, 3)
-        plt.plot(x, err2, 'b', label='Training mean_squared_logarithmic_error')
-        plt.plot(x, val_err2, 'r', label='Validation mean_squared_logarithmic_error')
-        plt.title('Training and validation mean_squared_logarithmic_error')
-        plt.legend()
+    print('Train shape {:}'.format(train_values_X.shape, train_values_y.shape))
+    print('Valid shape {:}'.format(valid_values_X.shape, valid_values_y.shape))
+    
+    from sklearn.ensemble import RandomForestRegressor
 
-        plt.show()
+    reg_forest = RandomForestRegressor(#n_estimators=500,
+                                    random_state=42,
+                                    verbose=1)
 
-    plot_history(hist)
+    reg_forest.fit(train_values_X, train_values_y)
+
+    valid_pred_y = reg_forest.predict(valid_values_X)
+
+
+    # Evaluation
+    # Scale predicted values back
+    scaled_valid_y = sc_y.inverse_transform(valid_values_y).astype(int)
+    scaled_valid_pred_y = sc_y.inverse_transform(valid_pred_y).astype(int)
+
+    # Make sure predicted and scaled back values are not negatives!
+    idexes = np.nonzero(scaled_valid_pred_y < 0)
+    scaled_valid_pred_y[idexes] = 0
+
+    # Compute rmse and rmsle
+    rmse_val = np.sqrt(mean_squared_error(scaled_valid_pred_y, scaled_valid_y))
+    print('sqrt mse: {:}'.format(rmse_val))
+    rmsle_val = rmsle(scaled_valid_pred_y, scaled_valid_y)
+    print('rmsle: {:}'.format(rmsle_val))
+
 
     # -- TODO Predict on test set here?---
     # Make sure if use_scaling, we need to apply inverse_transform on predicted y (likes)...
+    # See Notebook-Experiences.ipynb 
     #...
 
 if __name__ == '__main__':

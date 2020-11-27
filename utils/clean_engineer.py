@@ -6,7 +6,7 @@ from time import strptime
 NUM_LANGUAGES_TO_FEATUREIZE = 9
 ACCOUNT_AGE_SINCE_DATE = dt.datetime(2021, 1, 1) # Jan 1st, 2021 is the date we measure account "age" from
 
-COLUMNS_TO_DROP = ['Id', 'User Name', 'Profile Image']
+COLUMNS_TO_DROP = ['User Name', 'Profile Image']
 COLOUR_COLUMNS = ['Profile Text Color', 'Profile Page Color', 'Profile Theme Color']
 BOOLEAN_COLUMNS = ['Is Profile View Size Customized?', 'Location Public Visibility']
 LOCATION_COLUMNS = ['UTC Offset', 'Location', 'User Time Zone']

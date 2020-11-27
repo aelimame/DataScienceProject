@@ -73,7 +73,8 @@ class TextDataLoader():
         #self.transformed_features['Test'] = self.transformed_features['Num of Profile Likes']
 
         # TEST ONLY remove outiliers and scale num likes
-        self.transformed_features = self.transformed_features[self.transformed_features['Num of Profile Likes'] < 200000]
+        if 'Num of Profile Likes' in self.transformed_features:
+            self.transformed_features = self.transformed_features[self.transformed_features['Num of Profile Likes'] < 200000]
 #        min_num_likes = self.transformed_features['Num of Profile Likes'].min()
 #        max_num_likes = self.transformed_features['Num of Profile Likes'].max()
 #        scaler = 100
