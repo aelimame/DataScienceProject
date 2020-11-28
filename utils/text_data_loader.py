@@ -101,11 +101,8 @@ class TextDataLoader():
     # Return transformed features for all (entire dataframe)
     def get_transformed_features(self):
         if self.are_features_transformed:
-            # TODO
-            return self.transformed_features
-            #raise NotImplementedError
+            return self.transformed_features.copy() # Return a copy, to avoid external modifications on the data!
         return None
-        #raise NotImplementedError
 
 
     # Return transformed features for only the provided id

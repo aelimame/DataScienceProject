@@ -2,6 +2,8 @@
 *.pyc
 *.ipynb
 venv/*
+logs/*
+
 
 # VS-Code
 settings.json

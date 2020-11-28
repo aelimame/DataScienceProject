@@ -2,15 +2,18 @@
 #import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
+
+import tensorflow as tf
 from tensorflow.keras.utils import plot_model
 from tensorflow.keras.losses import MeanSquaredError, MeanSquaredLogarithmicError
 from tensorflow.keras.optimizers import Adam
+
 import pydot
-import tensorflow as tf
 import os
 from pathlib import Path
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, PowerTransformer
 
 # Project imports
 from utils.images_loader import ImagesLoader
@@ -109,7 +112,7 @@ def main():
     # TODO DEBUG using scaling for tests
     if use_scaling:
         sc_x = StandardScaler()
-        sc_y = StandardScaler()
+        pt_cox_y = PowerTransformer(method='box-cox', standardize=True) #StandardScaler()
 
     # - Train: use train_profiles_ids
     train_X, train_y = load_x_y_from_loaders(images_loader=images_loader,
@@ -119,7 +122,7 @@ def main():
     if use_scaling:
         # Fit and Transform on Train
         train_X[TEXT_FEATURES_INPUT_NAME] = sc_x.fit_transform(train_X[TEXT_FEATURES_INPUT_NAME])
-        train_y[OUTPUT_NAME] = sc_y.fit_transform(train_y[OUTPUT_NAME].reshape(-1, 1))
+        train_y[OUTPUT_NAME] = pt_cox_y.fit_transform((train_y[OUTPUT_NAME] + 1).reshape(-1, 1))
 
     # - Valid: use valid_profiles_ids
     valid_X, valid_y = load_x_y_from_loaders(images_loader=images_loader,
@@ -130,7 +133,7 @@ def main():
     if use_scaling:
         # Transform only on Valid
         valid_X[TEXT_FEATURES_INPUT_NAME] = sc_x.transform(valid_X[TEXT_FEATURES_INPUT_NAME])
-        valid_y[OUTPUT_NAME] = sc_y.transform(valid_y[OUTPUT_NAME].reshape(-1, 1))
+        valid_y[OUTPUT_NAME] = pt_cox_y.transform((valid_y[OUTPUT_NAME] + 1).reshape(-1, 1))
 
 
 
@@ -184,10 +187,8 @@ def main():
     print('Linear reg score: {:}'.format(reg.score(X, y)))
     # -- DEBUG --
 
-    # -- Random Forest --
-    from sklearn.metrics import auc, accuracy_score, confusion_matrix, mean_squared_error
-    import xgboost as xgb
 
+    # -- Prepare data for non NN models --
     train_values_X= train_X[TEXT_FEATURES_INPUT_NAME]
     train_values_y= train_y[OUTPUT_NAME]
 
@@ -196,7 +197,10 @@ def main():
 
     print('Train shape {:}'.format(train_values_X.shape, train_values_y.shape))
     print('Valid shape {:}'.format(valid_values_X.shape, valid_values_y.shape))
-    
+
+
+    # -- Random Forest --
+    from sklearn.metrics import auc, accuracy_score, confusion_matrix, mean_squared_error
     from sklearn.ensemble import RandomForestRegressor
 
     reg_forest = RandomForestRegressor(#n_estimators=500,
@@ -210,8 +214,8 @@ def main():
 
     # Evaluation
     # Scale predicted values back
-    scaled_valid_y = sc_y.inverse_transform(valid_values_y).astype(int)
-    scaled_valid_pred_y = sc_y.inverse_transform(valid_pred_y).astype(int)
+    scaled_valid_y = pt_cox_y.inverse_transform(valid_values_y.reshape(-1,1) - 1).astype(int)
+    scaled_valid_pred_y = pt_cox_y.inverse_transform(valid_pred_y.reshape(-1,1) - 1).astype(int)
 
     # Make sure predicted and scaled back values are not negatives!
     idexes = np.nonzero(scaled_valid_pred_y < 0)
