@@ -203,7 +203,20 @@ def main():
     from sklearn.metrics import auc, accuracy_score, confusion_matrix, mean_squared_error
     from sklearn.ensemble import RandomForestRegressor
 
-    reg_forest = RandomForestRegressor(#n_estimators=500,
+    # Found by random grid search
+    #{'bootstrap': True,
+    # 'max_depth': 100,
+    # 'max_features': 'auto',
+    # 'min_samples_leaf': 4,
+    # 'min_samples_split': 2,
+    # 'n_estimators': 1200}
+
+    reg_forest = RandomForestRegressor(bootstrap=True,
+                                    max_depth=100,
+                                    max_features='auto',
+                                    min_samples_leaf=4,
+                                    min_samples_split=2,
+                                    n_estimators=1200,
                                     random_state=42,
                                     verbose=1)
 

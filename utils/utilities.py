@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_log_error
 import numpy as np
 
-def rmsle(y_true, y_pred):
-    return np.sqrt(mean_squared_log_error(y_true, y_pred))
+def rmsle(y_true, y_pred, sample_weight=None):
+    return np.sqrt(mean_squared_log_error(y_true, y_pred, sample_weight))
 
 def plot_history(history):
     err = history.history['mean_squared_error']
