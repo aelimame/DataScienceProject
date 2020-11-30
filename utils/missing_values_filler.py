@@ -1,7 +1,7 @@
 #### FOR MAC OSX USERS
-import matplotlib
-matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
+# import matplotlib
+# matplotlib.use('TkAgg')
+# import matplotlib.pyplot as plt
 
 import pandas as pd
 import numpy as np
@@ -117,11 +117,13 @@ class MissingValuesFiller():
 # # Merge all unknowns
 # raw_df['Profile Category'] = raw_df['Profile Category'].replace(r'^\s*$', 'unknown', regex=True)
 
-# print(raw_df['Profile Category'].value_counts())
-# print(raw_df.shape[0])
+# print("Value counts input:\n{}\n".format(raw_df['Profile Category'].value_counts()))
+# print("Row count input:\n{}\n".format(raw_df.shape[0]))
+# print("Col count input:\n{}\n".format(raw_df.shape[1]))
 
 # mvf = MissingValuesFiller()
 # filled_df = mvf.fill_missing_values(raw_df, 'Profile Category', 'unknown', 'Num of Profile Likes', 5)
 
-# print(filled_df['Profile Category'].value_counts())
-# print(filled_df.shape[0])
+# print("Value counts output:\n{}\n".format(filled_df['Profile Category'].value_counts()))
+# print("Row count output:\n{}\n".format(filled_df.shape[0]))
+# print("Col count output:\n{}\n".format(filled_df.shape[1]))

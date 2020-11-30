@@ -2,6 +2,8 @@ import pandas as pd
 import datetime as dt
 from time import strptime
 
+from utils.missing_values_filler import MissingValuesFiller
+
 # Hyper-parameters
 NUM_LANGUAGES_TO_FEATUREIZE = 9
 ACCOUNT_AGE_SINCE_DATE = dt.datetime(2021, 1, 1) # Jan 1st, 2021 is the date we measure account "age" from
@@ -14,6 +16,7 @@ LOCATION_COLUMNS = ['UTC Offset', 'Location', 'User Time Zone']
 class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerMixin?
     def __init__(self, verbose = False):
         self.verbose = verbose
+        self.mvf = MissingValuesFiller()
 
     # TODO make it work like fit_transform and transform of sklearn to use pipelines...
     def fit_transform(self, input_df):
@@ -77,9 +80,27 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
 
     def engineer_profile_category(self):
         self.df['Profile Category'] = self.df['Profile Category'].replace(r'^\s*$', 'unknown', regex=True)
+        # TODO: Remove debugging prints, when the issue is solved.
+        # print("======================================")
+        # print("Value counts input:\n{}\n".format(self.df['Profile Category'].value_counts()))
+        # print("Row count input:\n{}\n".format(self.df.shape[0]))
+        # print("Col count input:\n{}\n".format(self.df.shape[1]))
+        # print("======================================")
+        if 'Num of Profile Likes' in self.df:
+            self.df = self.mvf.fill_missing_values(self.df, 'Profile Category', 'unknown', 'Num of Profile Likes', 5)
+        ### Use to change behavior for test set.
+        ### Tip: Use the most highly correlated field with 'Num of Profile Likes'
+        elif 'Num of People Following' in self.df:
+            self.df = self.mvf.fill_missing_values(self.df, 'Profile Category', 'unknown', 'Num of People Following', 5)
+        # print("======================================")
+        # print("Value counts output:\n{}\n".format(self.df['Profile Category'].value_counts()))
+        # print("Row count output:\n{}\n".format(self.df.shape[0]))
+        # print("Col count output:\n{}\n".format(self.df.shape[1]))
         one_hot_categories = pd.get_dummies(self.df['Profile Category'], prefix='Category')
         self.df.drop('Profile Category', axis=1, inplace=True)
         self.df = self.df.join(one_hot_categories)
+        # print("Df columns:\n{}\n:".format(self.df.columns))
+        # print("======================================")
         return self.df
 
     def engineer_profile_verification_status(self):
