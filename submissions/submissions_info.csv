@@ -1,7 +1,5 @@
 Version,Date,code git version,comments,score on kaggle
-v0, 26-11-2020,b994100b1de2d5d674dbcc0d327fbb60a6422b85,"Random Forest (RandState 42) | Num Like scaled based on min/max scaler | Error did a fit_transform on test_X instead of transform only!",2.45161
-v1, 27-11-2020,cbcb5a18f4513dc436ae60d94982c975b45d3f89,"Random Forest (RandState 42) | Num Like scaled with sklearn Power Transform CoxBox | Error did a fit_transform on test_X instead of transform only!",2.10281
-v2, 28-11-2020,dcd99b2efa6828b43dedce4be254966523b13e3e,"Random Forest (RandState 42) | Num Like scaled with sklearn Power Transform CoxBox | FIXED Error (fit_transform on test_X instead of transform only) | Random Search for params ( bootstrap=True max_depth=100 max_features='auto' min_samples_leaf=4 min_samples_split=2 n_estimators=1200)",1.73426
-v3, 29-11-2020,d80c464d13475cf6f7079e88513eb7ac2e6e6ab0,"Gradient Boost Regressor (RandState 42) | Num Like scaled with sklearn Power Transform CoxBox | Default params",1.70
-
+v0, 26-11-2020,b994100b1de2d5d674dbcc0d327fbb60a6422b85,"Random Forest (RandState 42); Num Like scaled based on min/max scaler; Error did a fit_transform on test_X instead of transform only!",2.45161
+v1, 27-11-2020,cbcb5a18f4513dc436ae60d94982c975b45d3f89,"Random Forest (RandState 42); Num Like scaled with sklearn Power Transform CoxBox; Error did a fit_transform on test_X instead of transform only!",2.10281
+v2, 28-11-2020,dcd99b2efa6828b43dedce4be254966523b13e3e,"Random Forest (RandState 42); Num Like scaled with sklearn Power Transform CoxBox; FIXED Error (fit_transform on test_X instead of transform only); Random Search for params ( bootstrap=True max_depth=100 max_features='auto' min_samples_leaf=4 min_samples_split=2 n_estimators=1200)",1.73426
 
