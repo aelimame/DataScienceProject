@@ -16,7 +16,7 @@ from pathlib import Path
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, PowerTransformer
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.metrics import mean_squared_error
 
 # Project imports
@@ -150,26 +150,13 @@ def main():
     print('Valid shape {:} {:}'.format(valid_values_X.shape, valid_values_y.shape))
 
 
-    # -- Random Forest on train/valid --
-    # Best params found by random grid search
-    #{'bootstrap': True,
-    # 'max_depth': 100,
-    # 'max_features': 'auto',
-    # 'min_samples_leaf': 4,
-    # 'min_samples_split': 2,
-    # 'n_estimators': 1200}
-    print('Random Forest on train/valid')
-    reg_forest = RandomForestRegressor(bootstrap=True,
-                                       max_depth=100,
-                                       max_features='auto',
-                                       min_samples_leaf=4,
-                                       min_samples_split=2,
-                                       n_estimators=1200,
-                                       random_state=42,
-                                       verbose=1)
+    # -- GradientBoostingRegressor on train/valid --
+    # With defaut values
+    print('GradientBoostingRegressor on train/valid')
+    gbr = GradientBoostingRegressor(random_state=42)
 
-    reg_forest.fit(train_values_X, train_values_y)
-    valid_pred_y = reg_forest.predict(valid_values_X)
+    gbr.fit(train_values_X, train_values_y)
+    valid_pred_y = gbr.predict(valid_values_X)
 
     # Evaluation
     # Scale predicted values back (-1 because we added +1 before cox-box tansform)
@@ -229,27 +216,15 @@ def main():
     print('All train data shape {:} {:}'.format(alldataset_X.shape, alldataset_y.shape))
     print('Test shape {:}'.format(testset_X.shape))
 
-    # -- Random Forest on all Train data set --
-    # Params Found by random grid search
-    #{'bootstrap': True,
-    # 'max_depth': 100,
-    # 'max_features': 'auto',
-    # 'min_samples_leaf': 4,
-    # 'min_samples_split': 2,
-    # 'n_estimators': 1200}
-    print('Random Forest on all Train data set')
-    reg_forest = RandomForestRegressor(bootstrap=True,
-                                    max_depth=100,
-                                    max_features='auto',
-                                    min_samples_leaf=4,
-                                    min_samples_split=2,
-                                    n_estimators=1200,
-                                    random_state=42,
-                                    verbose=1)
-    reg_forest.fit(alldataset_X, alldataset_y)
+    # -- GradientBoostingRegressor on all Train data set --
+    # With defaut values
+    print('GradientBoostingRegressor on all Train data set')
+    gbr = GradientBoostingRegressor(random_state=42)
+
+    gbr.fit(alldataset_X, alldataset_y)
 
     # Predict on Test set
-    test_pred_y = reg_forest.predict(testset_X)
+    test_pred_y = gbr.predict(testset_X)
 
     # Make sure if use_scaling, we need to apply inverse_transform on predicted y (likes)...
     # Scale predicted values to int (-1 because we added +1 before cox-box tansform)
@@ -277,11 +252,11 @@ def main():
     # done to the data and any other relevent information. Don't forget
     # to add the prediction file itself to the subfolder submissions\pred_files.
     # Also, name the prediction file based on the model, date, git version...
-    test_tosubmit_folder = os.path.join(log_folder,'TEST-Predictions')
+    test_tosubmit_folder = os.path.join(log_folder,'v6-GradientBoostingRegressor-Newfeature')
     # Create log folder if does not exist
     if not Path(test_tosubmit_folder).exists():
         os.mkdir(test_tosubmit_folder)
-    test_name = 'RandForestReg-HyperParamSearched-CoxBoxY-gitversion-xxxx-2020-11-29'
+    test_name = 'GBReg-Default-RandState42-CoxBoxY-gitversion-xxxx-2020-11-30'
     prediction_file_save_path = os.path.join(test_tosubmit_folder, test_name+'.csv')
     print('\nSaving prediction to "{:}"'.format(prediction_file_save_path))
     test_pd.to_csv(prediction_file_save_path, sep=',', index=False)
