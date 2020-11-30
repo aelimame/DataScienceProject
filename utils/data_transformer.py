@@ -86,12 +86,8 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
         # print("Row count input:\n{}\n".format(self.df.shape[0]))
         # print("Col count input:\n{}\n".format(self.df.shape[1]))
         # print("======================================")
-        if 'Num of Profile Likes' in self.df:
-            self.df = self.mvf.fill_missing_values(self.df, 'Profile Category', 'unknown', 'Num of Profile Likes', 5)
-        ### Use to change behavior for test set.
-        ### Tip: Use the most highly correlated field with 'Num of Profile Likes'
-        elif 'Num of People Following' in self.df:
-            self.df = self.mvf.fill_missing_values(self.df, 'Profile Category', 'unknown', 'Num of People Following', 5)
+        if 'Num of Status Updates' in self.df:
+            self.df = self.mvf.fill_missing_values(self.df, 'Profile Category', 'unknown', 'Num of Status Updates', 1)
         # print("======================================")
         # print("Value counts output:\n{}\n".format(self.df['Profile Category'].value_counts()))
         # print("Row count output:\n{}\n".format(self.df.shape[0]))

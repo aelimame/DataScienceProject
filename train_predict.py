@@ -2,9 +2,9 @@
 #import cv2
 
 #### FOR MAC OSX USERS
-# import matplotlib
-# matplotlib.use('TkAgg')
-# import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -18,6 +18,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, PowerTransformer
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import cross_validate
+from operator import itemgetter
 
 # Project imports
 from utils.images_loader import ImagesLoader
@@ -154,6 +156,11 @@ def main():
     # With defaut values
     print('GradientBoostingRegressor on train/valid')
     gbr = GradientBoostingRegressor(random_state=42)
+
+    # TODO: k-Fold CV, needs to split the data only one time. Need more work.
+    # ret = cross_validate(gbr, train_values_X, train_values_y, cv=5, return_estimator=True)
+    # best_index = max(enumerate(ret['test_score']), key=itemgetter(1))[0]
+    # gbr = ret['estimator'][best_index]
 
     gbr.fit(train_values_X, train_values_y)
     valid_pred_y = gbr.predict(valid_values_X)
