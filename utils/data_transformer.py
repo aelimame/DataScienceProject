@@ -11,10 +11,31 @@ COLOUR_COLUMNS = ['Profile Text Color', 'Profile Page Color', 'Profile Theme Col
 BOOLEAN_COLUMNS = ['Is Profile View Size Customized?', 'Location Public Visibility']
 LOCATION_COLUMNS = ['UTC Offset', 'Location', 'User Time Zone']
 
-class HAL9001DataCleaner:
-    def __init__(self, input_df, verbose = False):
-        self.df = input_df.copy(deep=True)
+class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerMixin?
+    def __init__(self, verbose = False):
         self.verbose = verbose
+
+    # TODO make it work like fit_transform and transform of sklearn to use pipelines...
+    def fit_transform(self, input_df):
+        # TODO for now, same as passing df in the constructor
+        self.df = input_df.copy(deep=True)
+        self.df = self.run_all()
+        self.df.dropna(inplace=True)
+        
+        # TODO Hard coded for now. Remove outiliers using IQR or other techniques
+        if 'Num of Profile Likes' in self.df:
+            return self.df[self.df['Num of Profile Likes'] < 200000]
+
+        return self.df
+
+    # TODO make it work like fit_transform and transform of sklearn transformers...
+    def fit(self, input_df):
+        return NotImplementedError
+
+    # TODO make it work like fit_transform and transform of sklearn transformers...
+    def transform(self, input_df):
+        return NotImplementedError
+
 
     def run_all(self):
         self.df = self.clean()

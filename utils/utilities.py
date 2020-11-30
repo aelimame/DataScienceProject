@@ -7,46 +7,61 @@ import numpy as np
 
 # RMSLE metric
 def rmsle(y_true, y_pred, sample_weight=None):
-    # Make sure predicted and scaled back values are not negatives!
-    idexes = np.nonzero(y_pred < 0)
-    y_pred[idexes] = 0
     return np.sqrt(mean_squared_log_error(y_true, y_pred, sample_weight))
 
 
 # Method to help load X and y from data loaders
+# Params: 
+#  data_transformer=None, # Will be used (if provided) to fit / transform data
+#  transform_only=False, # Transform only if true, fit and transform otherwise
 def load_x_y_from_loaders(images_loader,
                           text_data_loader,
                           image_input_name,
                           text_features_input_name,
                           output_name,
+                          data_transformer=None,
+                          transform_only=False,
                           profiles_ids_list=None,
                           include_images=False):
+
+    # initialize likes to None
     likes = None
 
     # If profiles_ids_list not provided fetch all profiles_ids in text data loader
     if profiles_ids_list is None:
-        profiles_ids_list = text_data_loader.get_transformed_features()['Id'].values
+        profiles_ids_list = text_data_loader.get_orig_features()['Id'].values
 
-    # Retunr X and y
-    images = np.array([images_loader.get_image_data_for_profile_id(profile_id) for profile_id in profiles_ids_list])
-    features = text_data_loader.get_transformed_features()
+    features = text_data_loader.get_orig_features()
+
+    # Fit/Transform data
+    if data_transformer is not None:
+        if transform_only:
+            features = data_transformer.transform(features)
+        else:
+            features = data_transformer.fit_transform(features)
+
     features = features[features['Id'].isin(profiles_ids_list)]
     if 'Num of Profile Likes' in features:
         likes = features['Num of Profile Likes']
         likes = np.array(likes)
-        features = features.drop(columns =['Id', 'Num of Profile Likes'])
-    else:
-        features = features.drop(columns =['Id'])
+        features = features.drop(columns =['Num of Profile Likes'])
+
+    # Update profiles ids list (Some may have been droped)
+    profiles_ids_list = features['Id'].values
+
+    features = features.drop(columns =['Id'])
     features = np.array(features)
-    
+
+    # Construct dictionaries
     if include_images:
-        X = {image_input_name: images, # Images
+        images = np.array([images_loader.get_image_data_for_profile_id(profile_id) for profile_id in profiles_ids_list])
+        X = {image_input_name: images,
              text_features_input_name: features} # Transformed Text Features
     else:
         X = {text_features_input_name: features} # Transformed Text Features
     
     if likes is not None:
-        y = {output_name: likes} # Likes
+        y = {output_name: likes}
         return X, y
     
     return X

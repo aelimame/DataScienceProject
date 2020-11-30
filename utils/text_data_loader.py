@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 from pathlib import Path
-from utils.clean_engineer import HAL9001DataCleaner
 import os
 
 class TextDataLoader():
@@ -42,16 +41,18 @@ class TextDataLoader():
         # Load images at initialization
         self._load_text_data_from_file()
 
+        """
         # Transform, encode, add new features...
         # TODO
         self._transform_features()
+        """
 
 
     def _load_text_data_from_file(self):
         self.orig_data = pd.read_csv(self.src_csv_file_path)
         self.is_data_loaded = True
 
-
+    """
     def _transform_features(self):
 
         # init transformed_features and fill with transformed data...
@@ -72,9 +73,6 @@ class TextDataLoader():
 
         #self.transformed_features['Test'] = self.transformed_features['Num of Profile Likes']
 
-        # TEST ONLY remove outiliers and scale num likes
-        if 'Num of Profile Likes' in self.transformed_features:
-            self.transformed_features = self.transformed_features[self.transformed_features['Num of Profile Likes'] < 200000]
 #        min_num_likes = self.transformed_features['Num of Profile Likes'].min()
 #        max_num_likes = self.transformed_features['Num of Profile Likes'].max()
 #        scaler = 100
@@ -82,22 +80,22 @@ class TextDataLoader():
 
 
         self.are_features_transformed = True
-
+    """
 
     # Return orignal data (entire dataframe)
-    def get_orig_data(self):
+    def get_orig_features(self):
         if self.is_data_loaded:
             return self.orig_data
         return None
 
 
     # Return original data for only the provided id
-    def get_orig_data_for_profile_id(self, id):
+    def get_orig_features_for_profile_id(self, id):
         if self.is_data_loaded:
             return self.orig_data[self.orig_data['Id'] == id]
         return None
 
-
+    """
     # Return transformed features for all (entire dataframe)
     def get_transformed_features(self):
         if self.are_features_transformed:
@@ -110,4 +108,4 @@ class TextDataLoader():
         if self.are_features_transformed:
             return self.transformed_features[self.transformed_features['Id'] == id]
         raise None
-
+    """

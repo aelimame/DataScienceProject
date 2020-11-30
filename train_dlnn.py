@@ -20,7 +20,7 @@ from utils.images_loader import ImagesLoader
 from utils.text_data_loader import TextDataLoader
 from utils.utilities import plot_history
 from utils.utilities import rmsle
-from model import TextOnlyModel, ImageAndTextModel
+from keras_models import TextOnlyModel, ImageAndTextModel
 
 # Names for acces to data in Dict (to be used with model inputs/output for better referencing)
 IMAGE_INPUT_NAME = 'image'
@@ -49,40 +49,6 @@ test_images_folder = r'./src_data/test_profile_images'
 log_folder = 'logs'
 
 
-# Method to help load X and y from data loaders TODO move to utilities
-def load_x_y_from_loaders(images_loader, text_data_loader, profiles_ids_list=None, include_images=False):
-    likes = None
-
-    # If profiles_ids_list not provided fetch all profiles_ids in text data loader
-    if profiles_ids_list is None:
-        profiles_ids_list = text_data_loader.get_transformed_features()['Id'].values
-
-    # Retunr X and y
-    images = np.array([images_loader.get_image_data_for_profile_id(profile_id) for profile_id in profiles_ids_list])
-    features = text_data_loader.get_transformed_features()
-    features = features[features['Id'].isin(profiles_ids_list)]
-    if 'Num of Profile Likes' in features:
-        likes = features['Num of Profile Likes']
-        likes = np.array(likes)
-        features = features.drop(columns =['Id', 'Num of Profile Likes'])
-    else:
-        features = features.drop(columns =['Id'])
-    features = np.array(features)
-    
-    if include_images:
-        X = {IMAGE_INPUT_NAME: images, # Images
-             TEXT_FEATURES_INPUT_NAME: features} # Transformed Text Features
-    else:
-        X = {TEXT_FEATURES_INPUT_NAME: features} # Transformed Text Features
-    
-    if likes is not None:
-        y = {OUTPUT_NAME: likes} # Likes
-        return X, y
-    
-    return X
-
-
-
 def main():
     # See devices and if we have a GPU
 #    print(tf.config.experimental.list_physical_devices())
@@ -109,14 +75,17 @@ def main():
     # -- Preare data for model  Train/Valid--
     # Will use a dict to associate the corresponding data to the right input in the model (Image vs Features)
 
-    # TODO DEBUG using scaling for tests
+    # TODO using scaling
     if use_scaling:
         sc_x = StandardScaler()
-        pt_cox_y = PowerTransformer(method='box-cox', standardize=True) #StandardScaler()
+        pt_cox_y = PowerTransformer(method='box-cox', standardize=True)
 
     # - Train: use train_profiles_ids
     train_X, train_y = load_x_y_from_loaders(images_loader=images_loader,
                                             text_data_loader=text_data_loader,
+                                            image_input_name=IMAGE_INPUT_NAME,
+                                            text_features_input_name=TEXT_FEATURES_INPUT_NAME,
+                                            output_name=OUTPUT_NAME,
                                             profiles_ids_list=train_profiles_ids,
                                             include_images=include_images)
     if use_scaling:
@@ -126,9 +95,13 @@ def main():
 
     # - Valid: use valid_profiles_ids
     valid_X, valid_y = load_x_y_from_loaders(images_loader=images_loader,
-                                text_data_loader=text_data_loader,
-                                profiles_ids_list=valid_profiles_ids,
-                                include_images=include_images)
+                                             text_data_loader=text_data_loader,
+                                             image_input_name=IMAGE_INPUT_NAME,
+                                             text_features_input_name=TEXT_FEATURES_INPUT_NAME,
+                                             output_name=OUTPUT_NAME,
+                                             profiles_ids_list=valid_profiles_ids,
+                                             include_images=include_images)
+
 
     if use_scaling:
         # Transform only on Valid
@@ -137,7 +110,7 @@ def main():
 
 
 
-    # -- Prepare model --
+    # -- Prepare DL NN model --
     image_height = images_loader.image_shape[0]
     image_width = images_loader.image_shape[1]
     image_nbr_channels = images_loader.image_shape[2]
@@ -178,67 +151,6 @@ def main():
 
     # -- Plot train/valid learning curves error/loss
     plot_history(hist)
-
-    # -- DEBUG linear regression on text features --
-    from sklearn.linear_model import LinearRegression
-    X= train_X[TEXT_FEATURES_INPUT_NAME]
-    y= train_y[OUTPUT_NAME]
-    reg = LinearRegression().fit(X, y)
-    print('Linear reg score: {:}'.format(reg.score(X, y)))
-    # -- DEBUG --
-
-
-    # -- Prepare data for non NN models --
-    train_values_X= train_X[TEXT_FEATURES_INPUT_NAME]
-    train_values_y= train_y[OUTPUT_NAME]
-
-    valid_values_X= valid_X[TEXT_FEATURES_INPUT_NAME]
-    valid_values_y= valid_y[OUTPUT_NAME]
-
-    print('Train shape {:}'.format(train_values_X.shape, train_values_y.shape))
-    print('Valid shape {:}'.format(valid_values_X.shape, valid_values_y.shape))
-
-
-    # -- Random Forest --
-    from sklearn.metrics import auc, accuracy_score, confusion_matrix, mean_squared_error
-    from sklearn.ensemble import RandomForestRegressor
-
-    # Found by random grid search
-    #{'bootstrap': True,
-    # 'max_depth': 100,
-    # 'max_features': 'auto',
-    # 'min_samples_leaf': 4,
-    # 'min_samples_split': 2,
-    # 'n_estimators': 1200}
-
-    reg_forest = RandomForestRegressor(bootstrap=True,
-                                    max_depth=100,
-                                    max_features='auto',
-                                    min_samples_leaf=4,
-                                    min_samples_split=2,
-                                    n_estimators=1200,
-                                    random_state=42,
-                                    verbose=1)
-
-    reg_forest.fit(train_values_X, train_values_y)
-
-    valid_pred_y = reg_forest.predict(valid_values_X)
-
-
-    # Evaluation
-    # Scale predicted values back
-    scaled_valid_y = pt_cox_y.inverse_transform(valid_values_y.reshape(-1,1) - 1).astype(int)
-    scaled_valid_pred_y = pt_cox_y.inverse_transform(valid_pred_y.reshape(-1,1) - 1).astype(int)
-
-    # Make sure predicted and scaled back values are not negatives!
-    idexes = np.nonzero(scaled_valid_pred_y < 0)
-    scaled_valid_pred_y[idexes] = 0
-
-    # Compute rmse and rmsle
-    rmse_val = np.sqrt(mean_squared_error(scaled_valid_pred_y, scaled_valid_y))
-    print('sqrt mse: {:}'.format(rmse_val))
-    rmsle_val = rmsle(scaled_valid_pred_y, scaled_valid_y)
-    print('rmsle: {:}'.format(rmsle_val))
 
 
     # -- TODO Predict on test set here?---
