@@ -10,14 +10,14 @@ from sklearn.impute import KNNImputer
 from imblearn.under_sampling import RandomUnderSampler
 
 class MissingValuesFiller():
-    def fill_missing_values(self, data, to_fill_column_name, to_fill_row_value, label_column_name):
-        print("\nMissing values filling started ...\n")
+    def fill_missing_values(self, data, to_fill_column_name, to_fill_row_value, label_column_name, k, debug=False):
+        if debug: print("\nMissing values filling started ...\n")
 
         # Create a deep copy
         df = data.copy(deep=True)
         cat_column_name = to_fill_column_name + ' Code'
 
-        print("Initial value counts:\n{}\n".format(data[to_fill_column_name].value_counts()))
+        if debug: print("Initial value counts:\n{}\n".format(data[to_fill_column_name].value_counts()))
 
         # Build numerical category
         df[to_fill_column_name] = pd.Categorical(df[to_fill_column_name])
@@ -25,8 +25,8 @@ class MissingValuesFiller():
         cat_map = dict(enumerate(df[to_fill_column_name].cat.categories))
         to_fill_code = [code for code, cat_name in cat_map.items() if cat_name == to_fill_row_value][0]
 
-        print("Categorical map:\n{}\n".format(cat_map))
-        print("Code to be filled: {}\n".format(to_fill_code))
+        if debug: print("Categorical map:\n{}\n".format(cat_map))
+        if debug: print("Code to be filled: {}\n".format(to_fill_code))
 
         # Creating subset df for undersampling
         df = df[[cat_column_name, label_column_name]]
@@ -34,7 +34,11 @@ class MissingValuesFiller():
         under_df = df[df[cat_column_name] != to_fill_code]
         under_df.reset_index(inplace=True)
 
-        print("Value counts before undersampling:\n{}\n".format(df[cat_column_name].value_counts()))
+        if debug: print("Value counts before undersampling:\n{}\n".format(df[cat_column_name].value_counts()))
+
+        ###################
+        ## Undersampling ##
+        ###################
 
         # Build data struc fo undersampling
         undersampler = RandomUnderSampler(sampling_strategy='majority')
@@ -58,32 +62,66 @@ class MissingValuesFiller():
         under_df[cat_column_name] = under_x
         under_df[label_column_name] = under_y
 
-        print("Value counts after undersampling:\n{}\n".format(under_df[cat_column_name].value_counts()))
+        if debug: print("Value counts after undersampling:\n{}\n".format(under_df[cat_column_name].value_counts()))
 
-        print("\nMissing values filling ended ...\n")
-        return None
+        ################
+        ## Imputation ##
+        ################
+
+        # Build imputation struct
+        start_index = under_df.shape[0]
+        merged_df = under_df.append(to_fill_df.reset_index(), ignore_index=True, sort=False)
+        merged_df[cat_column_name] = merged_df[cat_column_name].replace(to_replace=to_fill_code, value=np.nan)
+
+        if debug: print("Value counts before imputation:\n{}\n".format(merged_df[cat_column_name].value_counts()))
+
+        imputer = KNNImputer(n_neighbors=k, missing_values=np.nan)
+        imputed_data = imputer.fit_transform(merged_df)
+        imputed_df = pd.DataFrame(imputed_data, columns=merged_df.columns)
+
+        # Rounding neighborhood outputs
+        imputed_df[cat_column_name] = imputed_df[cat_column_name].round(0).astype(int)
+
+        # Verify data integrity
+        for i, r in merged_df.iterrows():
+            if r[label_column_name] != imputed_df.at[i, label_column_name]:
+                print("{} : {} --> {}".format(i, r[cat_column_name], r[label_column_name]))
+                print("{} : {} --> {}".format(i, imputed_df.at[i, cat_column_name],imputed_df.at[i, label_column_name]))
+                raise RuntimeError("Data integrity error when building up imputed dataframe.")
+
+        # Verify data integrity & build imputed dataframe
+        assert np.isnan(merged_df.at[start_index, cat_column_name])
+        assert np.isnan(merged_df.at[start_index + 1, cat_column_name])
+        assert not np.isnan(merged_df.at[start_index - 1, cat_column_name])
+        for ((i, r0), (j, r1)) in zip(imputed_df[start_index:].iterrows(), to_fill_df.iterrows()):
+            if data.at[j, to_fill_column_name] == to_fill_row_value and not (float(r0[label_column_name]) == float(r1[label_column_name]) == float(data.at[j, label_column_name])):
+                print("{} : {} --> {}".format(i, r0[cat_column_name], r0[label_column_name]))
+                print("{} : {} --> {}".format(j, r1[cat_column_name], r1[label_column_name]))
+                print("{} : {} --> {}".format(i, data.at[j, to_fill_column_name], data.at[j, label_column_name]))
+                raise RuntimeError("Data integrity error when building up imputed dataframe.")
+
+            # Build imputed dataframe
+            data.at[j, to_fill_column_name] = cat_map[int(r0[cat_column_name])]
+
+        if debug: print("Value counts after imputation:\n{}\n".format(data[to_fill_column_name].value_counts()))
+
+        if debug: print("\nMissing values filling ended ...\n")
+        return data
 
 ############
 ### TEST ###
 ############
 
-raw_df = pd.read_csv("src_data/train.csv")
+# raw_df = pd.read_csv("src_data/train.csv")
 
-# Merge all unknowns
-raw_df['Profile Category'] = raw_df['Profile Category'].replace(r'^\s*$', 'unknown', regex=True)
+# # Merge all unknowns
+# raw_df['Profile Category'] = raw_df['Profile Category'].replace(r'^\s*$', 'unknown', regex=True)
 
-mvf = MissingValuesFiller()
-print(mvf.fill_missing_values(raw_df, 'Profile Category', 'unknown', 'Num of Profile Likes'))
+# print(raw_df['Profile Category'].value_counts())
+# print(raw_df.shape[0])
 
-# nu_df = profile_df[profile_df['Profile Category Code'] != 3]
-# print("Values counts (before):\n{}".format(nu_df['Profile Category Code'].value_counts()))
-# undersampler = RandomUnderSampler(sampling_strategy='not minority')
-# category_codes = [nu_df['Profile Category Code'].tolist()]
-# category_codes = np.array(category_codes).T
-# likes = nu_df['Num of Profile Likes'].tolist()
-# category_codes_under, likes_under = undersampler.fit_resample(category_codes, likes)
-# category_codes_under = list(np.concatenate(category_codes_under.T).flat)
-# under_profile_df = pd.DataFrame(columns=["Profile Category Code","Num of Profile Likes"])
-# under_profile_df["Profile Category Code"] = category_codes_under
-# under_profile_df["Num of Profile Likes"] = likes_under
-# print("Values counts (after):\n{}".format(under_profile_df['Profile Category Code'].value_counts()))
+# mvf = MissingValuesFiller()
+# filled_df = mvf.fill_missing_values(raw_df, 'Profile Category', 'unknown', 'Num of Profile Likes', 5)
+
+# print(filled_df['Profile Category'].value_counts())
+# print(filled_df.shape[0])
