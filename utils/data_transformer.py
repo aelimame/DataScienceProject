@@ -1,5 +1,7 @@
 import pandas as pd
 import datetime as dt
+import numpy as np
+
 from time import strptime
 
 from utils.missing_values_filler import MissingValuesFiller
