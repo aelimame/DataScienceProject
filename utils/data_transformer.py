@@ -81,7 +81,10 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
 
         # Using a random number between -8 UTC and + 10 UTC because that encompases most of the
         # land mass of the Earth.
-        self.df['UTC Offset'] = self.df['UTC Offset'].fillna( np.random.randint( -8, 11 )*60*60 )
+#        self.df['UTC Offset'] = self.df['UTC Offset'].fillna( np.random.randint( -8, 11 )*60*60 )
+        utc_for_nan = -5 # Most frequent value
+        self.df['UTC Offset'] = self.df['UTC Offset'].fillna(utc_for_nan *60*60 )
+
         # floor so we group 1/2 hour offsets
         self.df['UTC Offset'] = np.floor((self.df['UTC Offset']/60/60)).astype(int)
 
@@ -105,8 +108,8 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
 
     def engineer_profile_category(self):
         self.df['Profile Category'] = self.df['Profile Category'].replace(r'^\s*$', 'unknown', regex=True)
-        if 'Num of Status Updates' in self.df:
-            self.df = self.mvf.fill_missing_values(self.df, 'Profile Category', 'unknown', 'Num of Status Updates', 20)
+#        if 'Num of Status Updates' in self.df:
+#            self.df = self.mvf.fill_missing_values(self.df, 'Profile Category', 'unknown', 'Num of Status Updates', 20)
         one_hot_categories = pd.get_dummies(self.df['Profile Category'], prefix='Category')
         self.df.drop('Profile Category', axis=1, inplace=True)
         self.df = self.df.join(one_hot_categories)
