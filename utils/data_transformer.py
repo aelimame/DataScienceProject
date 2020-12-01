@@ -105,33 +105,16 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
 
     def engineer_profile_category(self):
         self.df['Profile Category'] = self.df['Profile Category'].replace(r'^\s*$', 'unknown', regex=True)
-        # TODO: Remove debugging prints, when the issue is solved.
-        # print("======================================")
-        # print("Value counts input:\n{}\n".format(self.df['Profile Category'].value_counts()))
-        # print("Row count input:\n{}\n".format(self.df.shape[0]))
-        # print("Col count input:\n{}\n".format(self.df.shape[1]))
-        # print("======================================")
         if 'Num of Status Updates' in self.df:
             self.df = self.mvf.fill_missing_values(self.df, 'Profile Category', 'unknown', 'Num of Status Updates', 1)
-        # print("======================================")
-        # print("Value counts output:\n{}\n".format(self.df['Profile Category'].value_counts()))
-        # print("Row count output:\n{}\n".format(self.df.shape[0]))
-        # print("Col count output:\n{}\n".format(self.df.shape[1]))
         one_hot_categories = pd.get_dummies(self.df['Profile Category'], prefix='Category')
         self.df.drop('Profile Category', axis=1, inplace=True)
         self.df = self.df.join(one_hot_categories)
-        # print("Df columns:\n{}\n:".format(self.df.columns))
-        # print("======================================")
         return self.df
 
     def engineer_profile_verification_status(self):
-        ## TODO: Uncomment and test performance changes
-        # self.df['Profile Verification Status'] = self.df['Profile Verification Status'].replace('Pending', 'Not verified', regex=True)
-        # self.df['Profile Verification Status'] = self.df['Profile Verification Status'].apply(lambda val: True if val == 'Verified' else False)
-        # Got: Validation rmsle: 1.7569663216091798 (was 1.7460608920116656 before)
-        one_hot_categories = pd.get_dummies(self.df['Profile Verification Status'], prefix='Verification_Status')
-        self.df.drop('Profile Verification Status', axis=1, inplace=True)
-        self.df = self.df.join(one_hot_categories)
+        self.df['Profile Verification Status'] = self.df['Profile Verification Status'].replace('Pending', 'Not verified', regex=True)
+        self.df['Profile Verification Status'] = self.df['Profile Verification Status'].apply(lambda val: True if val == 'Verified' else False)
         return self.df
 
     def engineer_profile_cover_image_status(self):
