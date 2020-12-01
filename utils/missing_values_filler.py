@@ -41,7 +41,7 @@ class MissingValuesFiller():
         ###################
 
         # Build data struc fo undersampling
-        undersampler = RandomUnderSampler(sampling_strategy='majority')
+        undersampler = RandomUnderSampler(sampling_strategy='majority', random_state=42)
         x = [under_df[cat_column_name].tolist()]
         x = np.array(x).T
         y = under_df[label_column_name].tolist()
