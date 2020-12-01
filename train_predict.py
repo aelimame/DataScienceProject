@@ -155,7 +155,12 @@ def main():
     # -- GradientBoostingRegressor on train/valid --
     # With defaut values
     print('GradientBoostingRegressor on train/valid')
-    gbr = GradientBoostingRegressor(random_state=42)
+    gbr = GradientBoostingRegressor(n_estimators=100,
+                                max_features='sqrt',
+                                max_depth=5,
+                                min_samples_split=2,
+                                min_samples_leaf=7,
+                                random_state=42)
 
     # TODO: k-Fold CV, needs to split the data only one time. Need more work.
     # ret = cross_validate(gbr, train_values_X, train_values_y, cv=5, return_estimator=True)
@@ -226,7 +231,12 @@ def main():
     # -- GradientBoostingRegressor on all Train data set --
     # With defaut values
     print('GradientBoostingRegressor on all Train data set')
-    gbr = GradientBoostingRegressor(random_state=42)
+    gbr = GradientBoostingRegressor(n_estimators=100,
+                                max_features='sqrt',
+                                max_depth=5,
+                                min_samples_split=2,
+                                min_samples_leaf=7,
+                                random_state=42)
 
     gbr.fit(alldataset_X, alldataset_y)
 
@@ -259,11 +269,11 @@ def main():
     # done to the data and any other relevent information. Don't forget
     # to add the prediction file itself to the subfolder submissions\pred_files.
     # Also, name the prediction file based on the model, date, git version...
-    test_tosubmit_folder = os.path.join(log_folder,'v6-GradientBoostingRegressor-Newfeature')
+    test_tosubmit_folder = os.path.join(log_folder,'v7-GradientBoostingRegressor-Newfeature-Hyperparams')
     # Create log folder if does not exist
     if not Path(test_tosubmit_folder).exists():
         os.mkdir(test_tosubmit_folder)
-    test_name = 'GBReg-Default-RandState42-CoxBoxY-gitversion-xxxx-2020-11-30'
+    test_name = 'GBReg-HyperParams-NewFeature-RandState42-CoxBoxY-gitversion-xxxx-2020-12-01'
     prediction_file_save_path = os.path.join(test_tosubmit_folder, test_name+'.csv')
     print('\nSaving prediction to "{:}"'.format(prediction_file_save_path))
     test_pd.to_csv(prediction_file_save_path, sep=',', index=False)
