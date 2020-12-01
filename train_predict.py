@@ -153,7 +153,7 @@ def main():
 
 
     # -- GradientBoostingRegressor on train/valid --
-    # With defaut values
+    # With best searched hyper parms
     print('GradientBoostingRegressor on train/valid')
     gbr = GradientBoostingRegressor(n_estimators=100,
                                 max_features='sqrt',
@@ -229,7 +229,7 @@ def main():
     print('Test shape {:}'.format(testset_X.shape))
 
     # -- GradientBoostingRegressor on all Train data set --
-    # With defaut values
+    # With best searched hyper parms
     print('GradientBoostingRegressor on all Train data set')
     gbr = GradientBoostingRegressor(n_estimators=100,
                                 max_features='sqrt',
