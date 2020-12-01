@@ -8,10 +8,9 @@ from utils.missing_values_filler import MissingValuesFiller
 NUM_LANGUAGES_TO_FEATUREIZE = 9
 ACCOUNT_AGE_SINCE_DATE = dt.datetime(2021, 1, 1) # Jan 1st, 2021 is the date we measure account "age" from
 
-COLUMNS_TO_DROP = ['User Name', 'Profile Image']
+COLUMNS_TO_DROP = ['User Name', 'Profile Image', 'User Time Zone']
 COLOUR_COLUMNS = ['Profile Text Color', 'Profile Page Color', 'Profile Theme Color']
 BOOLEAN_COLUMNS = ['Is Profile View Size Customized?', 'Location Public Visibility']
-LOCATION_COLUMNS = ['UTC Offset', 'Location', 'User Time Zone']
 
 class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerMixin?
     def __init__(self, verbose = False):
@@ -72,10 +71,29 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
         self.df['Has Personal URL'] = self.df['Personal URL'].apply(lambda urlVal: 0 if str(urlVal).lower() == 'nan' else 1 )
         self.df.drop('Personal URL', axis=1, inplace=True)
         return self.df
-
-    def engineer_location_columns(self):
-        # TODO: For now, just drop these
-        self.df.drop(LOCATION_COLUMNS, axis=1, inplace=True)
+    
+    def engineer_utc_offset(self):
+        # We are going to bin into one-hour timezones, and one-hot
+        # Maybe try this to fill missing values?
+        # self.df = self.mvf.fill_missing_values(self.df, 'UTC Offset', NaN, 'Num of Profile Likes', 5)
+        
+        # Using a random number between -8 UTC and + 10 UTC because that encompases most of the
+        # land mass of the Earth.
+        self.df['UTC Offset'] = self.df['UTC Offset'].fillna( np.random.randint( -8, 11 )*60*60 )
+        # floor so we group 1/2 hour offsets
+        self.df['UTC Offset'] = np.floor((self.df['UTC Offset']/60/60)).astype(int)
+        
+        one_hot_categories = pd.get_dummies(self.df['UTC Offset'], prefix='UTC Offset')
+        self.df.drop('UTC Offset', axis=1, inplace=True)
+        self.df = self.df.join(one_hot_categories)
+        
+        return self.df
+    
+    def engineer_location(self):
+        # For now, just set a flag if the location is empty
+        self.df['Has Location'] = self.df['Location'].apply(lambda location: False if pd.isnull(location) else True )
+        # TODO: Use geocoding results to add more info?
+        self.df.drop('Location', axis=1, inplace=True)
         return self.df
 
     def engineer_profile_category(self):
@@ -165,7 +183,8 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
         return self.df
 
     def engineer(self):
-        self.df = self.engineer_location_columns()
+        self.df = self.engineer_location()
+        self.df = self.engineer_utc_offset()
         self.df = self.engineer_boolean_columns()
         self.df = self.engineer_colour_columns()
         self.df = self.engineer_personal_url()
