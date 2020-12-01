@@ -58,3 +58,8 @@ Add (Don't commit thoses lines):
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+
+
+## Create PDF from jupyter
+
+https://pypi.org/project/notebook-as-pdf/
