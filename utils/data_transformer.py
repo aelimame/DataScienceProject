@@ -25,7 +25,7 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
         self.df = input_df.copy(deep=True)
         self.df = self.run_all()
         self.df.dropna(inplace=True)
-        
+
         # TODO Hard coded for now. Remove outiliers using IQR or other techniques
         if 'Num of Profile Likes' in self.df:
             return self.df[self.df['Num of Profile Likes'] < 200000]
@@ -73,24 +73,29 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
         self.df['Has Personal URL'] = self.df['Personal URL'].apply(lambda urlVal: 0 if str(urlVal).lower() == 'nan' else 1 )
         self.df.drop('Personal URL', axis=1, inplace=True)
         return self.df
-    
+
     def engineer_utc_offset(self):
         # We are going to bin into one-hour timezones, and one-hot
         # Maybe try this to fill missing values?
         # self.df = self.mvf.fill_missing_values(self.df, 'UTC Offset', NaN, 'Num of Profile Likes', 5)
-        
+
         # Using a random number between -8 UTC and + 10 UTC because that encompases most of the
         # land mass of the Earth.
         self.df['UTC Offset'] = self.df['UTC Offset'].fillna( np.random.randint( -8, 11 )*60*60 )
         # floor so we group 1/2 hour offsets
         self.df['UTC Offset'] = np.floor((self.df['UTC Offset']/60/60)).astype(int)
-        
+
         one_hot_categories = pd.get_dummies(self.df['UTC Offset'], prefix='UTC Offset')
         self.df.drop('UTC Offset', axis=1, inplace=True)
         self.df = self.df.join(one_hot_categories)
-        
+
+		# Ensure all the important columns are there
+        for i in np.arange(-12, 13):
+        	if 'UTC Offset_'+str(i) not in self.df:
+        		self.df['UTC Offset_'+str(i)] = 0
+
         return self.df
-    
+
     def engineer_location(self):
         # For now, just set a flag if the location is empty
         self.df['Has Location'] = self.df['Location'].apply(lambda location: False if pd.isnull(location) else True )
