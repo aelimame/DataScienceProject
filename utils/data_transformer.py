@@ -105,8 +105,8 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
 
     def engineer_profile_category(self):
         self.df['Profile Category'] = self.df['Profile Category'].replace(r'^\s*$', 'unknown', regex=True)
-        # if 'Num of Status Updates' in self.df:
-        #     self.df = self.mvf.fill_missing_values(self.df, 'Profile Category', 'unknown', 'Num of Status Updates', 1)
+        if 'Num of Status Updates' in self.df:
+            self.df = self.mvf.fill_missing_values(self.df, 'Profile Category', 'unknown', 'Num of Status Updates', 20)
         one_hot_categories = pd.get_dummies(self.df['Profile Category'], prefix='Category')
         self.df.drop('Profile Category', axis=1, inplace=True)
         self.df = self.df.join(one_hot_categories)

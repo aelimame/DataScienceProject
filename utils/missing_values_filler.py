@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 import seaborn as sns
 from sklearn.impute import KNNImputer
-from imblearn.under_sampling import RandomUnderSampler
+from imblearn.under_sampling import TomekLinks
 
 class MissingValuesFiller():
     def fill_missing_values(self, data, to_fill_column_name, to_fill_row_value, label_column_name, k, debug=False):
@@ -41,7 +41,7 @@ class MissingValuesFiller():
         ###################
 
         # Build data struc fo undersampling
-        undersampler = RandomUnderSampler(sampling_strategy='majority')
+        undersampler = TomekLinks(sampling_strategy='majority')
         x = [under_df[cat_column_name].tolist()]
         x = np.array(x).T
         y = under_df[label_column_name].tolist()
