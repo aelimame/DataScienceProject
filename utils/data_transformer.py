@@ -122,6 +122,8 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
     def engineer_profile_verification_status(self):
         ## TODO: Uncomment and test performance changes
         # self.df['Profile Verification Status'] = self.df['Profile Verification Status'].replace('Pending', 'Not verified', regex=True)
+        # self.df['Profile Verification Status'] = self.df['Profile Verification Status'].apply(lambda val: True if val == 'Verified' else False)
+        # Got: Validation rmsle: 1.7569663216091798 (was 1.7460608920116656 before)
         one_hot_categories = pd.get_dummies(self.df['Profile Verification Status'], prefix='Verification_Status')
         self.df.drop('Profile Verification Status', axis=1, inplace=True)
         self.df = self.df.join(one_hot_categories)
