@@ -16,9 +16,10 @@ COLOUR_COLUMNS = ['Profile Text Color', 'Profile Page Color', 'Profile Theme Col
 BOOLEAN_COLUMNS = ['Is Profile View Size Customized?', 'Location Public Visibility']
 
 class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerMixin?
-    def __init__(self, verbose = False):
+    def __init__(self, min_likes_cutoff=80000, verbose = False):
         self.verbose = verbose
         self.mvf = MissingValuesFiller()
+        self.min_likes_cutoff = min_likes_cutoff
 
     # TODO make it work like fit_transform and transform of sklearn to use pipelines...
     def fit_transform(self, input_df):
@@ -30,8 +31,8 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
         # TODO Hard coded for now. Remove outiliers using IQR or other techniques
         # TODO lower limit? ==0?
         if 'Num of Profile Likes' in self.df:
-            self.df = self.df[self.df['Num of Profile Likes'] < 80000]
-            return self.df[self.df['Num of Profile Likes'] > 1]
+            self.df = self.df[self.df['Num of Profile Likes'] < self.min_likes_cutoff]
+            #return self.df[self.df['Num of Profile Likes'] > 1]
 
         return self.df
 
