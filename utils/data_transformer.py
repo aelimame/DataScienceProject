@@ -30,8 +30,8 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
         # TODO Hard coded for now. Remove outiliers using IQR or other techniques
         # TODO lower limit? ==0?
         if 'Num of Profile Likes' in self.df:
-            return self.df[self.df['Num of Profile Likes'] < 80000]
-            #return self.df[self.df['Num of Profile Likes'] > 1]
+            self.df = self.df[self.df['Num of Profile Likes'] < 80000]
+            return self.df[self.df['Num of Profile Likes'] > 1]
 
         return self.df
 
@@ -154,7 +154,7 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
         col_name = 'Avg Daily Profile Clicks'
         self.df[col_name] = self.df[col_name].fillna(self.df[col_name].mean())
         return self.df
-    
+
     def engineer_num_of_status_updates(self):
         col_name = 'Num of Status Updates'
 
