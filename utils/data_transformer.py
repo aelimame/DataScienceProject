@@ -9,6 +9,7 @@ from utils.missing_values_filler import MissingValuesFiller
 # Hyper-parameters
 NUM_LANGUAGES_TO_FEATUREIZE = 9
 ACCOUNT_AGE_SINCE_DATE = dt.datetime(2021, 1, 1) # Jan 1st, 2021 is the date we measure account "age" from
+UTC_FOR_NA = -5898.887938 # Mean from Train data analysis
 
 COLUMNS_TO_DROP = ['User Name', 'Profile Image', 'User Time Zone']
 COLOUR_COLUMNS = ['Profile Text Color', 'Profile Page Color', 'Profile Theme Color']
@@ -27,6 +28,7 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
         self.df.dropna(inplace=True)
 
         # TODO Hard coded for now. Remove outiliers using IQR or other techniques
+        # TODO lower limit? ==0?
         if 'Num of Profile Likes' in self.df:
             return self.df[self.df['Num of Profile Likes'] < 200000]
 
@@ -82,20 +84,19 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
         # Using a random number between -8 UTC and + 10 UTC because that encompases most of the
         # land mass of the Earth.
 #        self.df['UTC Offset'] = self.df['UTC Offset'].fillna( np.random.randint( -8, 11 )*60*60 )
-        utc_for_nan = -5 # Most frequent value
-        self.df['UTC Offset'] = self.df['UTC Offset'].fillna(utc_for_nan *60*60 )
+        self.df['UTC Offset'] = self.df['UTC Offset'].fillna(UTC_FOR_NA)
 
         # floor so we group 1/2 hour offsets
         self.df['UTC Offset'] = np.floor((self.df['UTC Offset']/60/60)).astype(int)
 
-        one_hot_categories = pd.get_dummies(self.df['UTC Offset'], prefix='UTC Offset')
-        self.df.drop('UTC Offset', axis=1, inplace=True)
-        self.df = self.df.join(one_hot_categories)
+#        one_hot_categories = pd.get_dummies(self.df['UTC Offset'], prefix='UTC Offset')
+#        self.df.drop('UTC Offset', axis=1, inplace=True)
+#        self.df = self.df.join(one_hot_categories)
 
 		# Ensure all the important columns are there
-        for i in np.arange(-12, 13):
-        	if 'UTC Offset_'+str(i) not in self.df:
-        		self.df['UTC Offset_'+str(i)] = 0
+#        for i in np.arange(-12, 13):
+#        	if 'UTC Offset_'+str(i) not in self.df:
+#        		self.df['UTC Offset_'+str(i)] = 0
 
         return self.df
 
@@ -108,8 +109,8 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
 
     def engineer_profile_category(self):
         self.df['Profile Category'] = self.df['Profile Category'].replace(r'^\s*$', 'unknown', regex=True)
-#        if 'Num of Status Updates' in self.df:
-#            self.df = self.mvf.fill_missing_values(self.df, 'Profile Category', 'unknown', 'Num of Status Updates', 20)
+        if 'Num of Status Updates' in self.df:
+            self.df = self.mvf.fill_missing_values(self.df, 'Profile Category', 'unknown', 'Num of Status Updates', 20)
         one_hot_categories = pd.get_dummies(self.df['Profile Category'], prefix='Category')
         self.df.drop('Profile Category', axis=1, inplace=True)
         self.df = self.df.join(one_hot_categories)
@@ -159,7 +160,7 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
         one_hot = pd.get_dummies(tmp, prefix="Status_Updates")
         self.df = self.df.drop([col_name], axis=1)
 
-        self.df[col_name] = self.df.join(one_hot)
+        self.df = self.df.join(one_hot)
         return self.df
 
     def engineer_profile_creation_timestamp(self):
@@ -198,6 +199,7 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
         self.df = self.engineer_user_language(NUM_LANGUAGES_TO_FEATUREIZE)
         self.df = self.engineer_avg_daily_visit_seconds()
         self.df = self.engineer_avg_daily_profile_clicks()
+        #self.df = self.engineer_num_of_status_updates()
         # More engineering ?
         return self.df
 

@@ -41,47 +41,12 @@ class TextDataLoader():
         # Load images at initialization
         self._load_text_data_from_file()
 
-        """
-        # Transform, encode, add new features...
-        # TODO
-        self._transform_features()
-        """
-
 
     def _load_text_data_from_file(self):
         self.orig_data = pd.read_csv(self.src_csv_file_path)
         self.is_data_loaded = True
 
-    """
-    def _transform_features(self):
-
-        # init transformed_features and fill with transformed data...
-        cleaner = HAL9001DataCleaner(self.orig_data)
-        self.transformed_features = cleaner.run_all()
-        self.transformed_features.dropna(inplace=True)
-
-        # TODO TESTS only
-#         self.transformed_features = self.transformed_features[['Id',
-#                                                                'Avg Daily Profile Clicks',
-#                                                                #'Profile_age',
-#                                                                'Avg Daily Profile Visit Duration in seconds',
-#                                                                'Num of Followers',
-#                                                                'Num of People Following',
-#                                                                'Num of Status Updates',
-#                                                                'Num of Direct Messages',
-#                                                                'Num of Profile Likes']]
-
-        #self.transformed_features['Test'] = self.transformed_features['Num of Profile Likes']
-
-#        min_num_likes = self.transformed_features['Num of Profile Likes'].min()
-#        max_num_likes = self.transformed_features['Num of Profile Likes'].max()
-#        scaler = 100
-#        self.transformed_features['Num of Profile Likes'] = ((self.transformed_features['Num of Profile Likes']-min_num_likes)/(max_num_likes-min_num_likes))*scaler
-
-
-        self.are_features_transformed = True
-    """
-
+ 
     # Return orignal data (entire dataframe)
     def get_orig_features(self):
         if self.is_data_loaded:
@@ -94,18 +59,3 @@ class TextDataLoader():
         if self.is_data_loaded:
             return self.orig_data[self.orig_data['Id'] == id]
         return None
-
-    """
-    # Return transformed features for all (entire dataframe)
-    def get_transformed_features(self):
-        if self.are_features_transformed:
-            return self.transformed_features.copy() # Return a copy, to avoid external modifications on the data!
-        return None
-
-
-    # Return transformed features for only the provided id
-    def get_transformed_features_for_profile_id(self, id):
-        if self.are_features_transformed:
-            return self.transformed_features[self.transformed_features['Id'] == id]
-        raise None
-    """
