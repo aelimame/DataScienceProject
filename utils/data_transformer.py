@@ -30,7 +30,8 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
         # TODO Hard coded for now. Remove outiliers using IQR or other techniques
         # TODO lower limit? ==0?
         if 'Num of Profile Likes' in self.df:
-            return self.df[self.df['Num of Profile Likes'] < 200000]
+            return self.df[self.df['Num of Profile Likes'] < 80000]
+            #return self.df[self.df['Num of Profile Likes'] > 1]
 
         return self.df
 
@@ -117,8 +118,9 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
         return self.df
 
     def engineer_profile_verification_status(self):
-        self.df['Profile Verification Status'] = self.df['Profile Verification Status'].replace('Pending', 'Not verified', regex=True)
-        self.df['Profile Verification Status'] = self.df['Profile Verification Status'].apply(lambda val: True if val == 'Verified' else False)
+        #self.df['Profile Verification Status'] = self.df['Profile Verification Status'].replace('Pending', 'Not verified', regex=True)
+        #self.df['Profile Verification Status'] = self.df['Profile Verification Status'].apply(lambda val: True if val == 'Verified' else False)
+        self.df['Profile Verification Status'] = self.df['Profile Verification Status'].apply(lambda val: 1 if val == 'Verified' else (-1 if val == 'Pending' else 0))
         return self.df
 
     def engineer_profile_cover_image_status(self):

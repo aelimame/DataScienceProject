@@ -44,7 +44,7 @@ OUTPUT_NAME = 'likes'
 # params
 use_scaling = True
 include_images = False
-
+random_seed = 42
 
 # data paths
 train_text_path = r'./src_data/train.csv'
@@ -240,7 +240,7 @@ def main():
                                     max_depth=3,
                                     min_samples_split=2,
                                     min_samples_leaf=10,
-                                    random_state=42)
+                                    random_state=random_seed)
 
     
     # Pipeline (Has scaling, power_transform and regressor inside)
@@ -249,8 +249,8 @@ def main():
 
     # -- KFold CV using scorer based on rmsle --
     scorer = make_scorer(rmsle, greater_is_better=False)
-    kfoldcv = KFold(n_splits=10, random_state=42, shuffle=True)
-    rep_kfoldcv = RepeatedKFold(n_splits=10, n_repeats=3, random_state=42)
+    kfoldcv = KFold(n_splits=10, random_state=random_seed, shuffle=True)
+    rep_kfoldcv = RepeatedKFold(n_splits=10, n_repeats=3, random_state=random_seed)
 
 
     scores = cross_val_score(pipe,
@@ -315,11 +315,11 @@ def main():
     # done to the data and any other relevent information. Don't forget
     # to add the prediction file itself to the subfolder submissions\pred_files.
     # Also, name the prediction file based on the model, date, git version...
-    test_tosubmit_folder = os.path.join(log_folder,'v8-GradientBoostingRegressor-MoreNewfeature-Hyperparams')
+    test_tosubmit_folder = os.path.join(log_folder,'vx-GradientBoostingRegressor-MoreNewfeature-Hyperparams')
     # Create log folder if does not exist
     if not Path(test_tosubmit_folder).exists():
         os.mkdir(test_tosubmit_folder)
-    test_name = 'GBReg-HyperParams-MoreNewFeature-RandState42-CoxBoxY-gitversion-xxxx-2020-12-01-PIPE'
+    test_name = 'GBReg-HyperParams-MoreNewFeature-RandState42-CoxBoxY-gitversion-xxxx-2020-12-02-PIPE'
     prediction_file_save_path = os.path.join(test_tosubmit_folder, test_name+'.csv')
     print('\nSaving prediction to "{:}"'.format(prediction_file_save_path))
     test_pd.to_csv(prediction_file_save_path, sep=',', index=False)
