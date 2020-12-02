@@ -148,6 +148,16 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
         col_name = 'Avg Daily Profile Clicks'
         self.df[col_name] = self.df[col_name].fillna(self.df[col_name].mean())
         return self.df
+    
+    def engineer_num_of_status_updates(self)
+        col_name = 'Num of Status Updates'
+
+        tmp = pd.qcut(self.df[col_name], 4, labels=["low", "medium", "high", "very high"])
+        one_hot = pd.get_dummies(tmp, prefix="Status_Updates")
+        self.df = self.df.drop([col_name], axis=1)
+
+        self.df[col_name] = self.df.join(one_hot)
+        return self.df
 
     def engineer_profile_creation_timestamp(self):
         # Our dates come in the format:
