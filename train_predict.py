@@ -16,8 +16,8 @@ from operator import itemgetter
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import KFold, RepeatedKFold
 from sklearn.model_selection import cross_val_score
-from sklearn.preprocessing import StandardScaler, PowerTransformer
-from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.preprocessing import StandardScaler, PowerTransformer, QuantileTransformer, RobustScaler, Normalizer
+from sklearn.ensemble import GradientBoostingRegressor, BaggingRegressor, RandomForestRegressor, AdaBoostRegressor
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import make_scorer
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -46,6 +46,9 @@ use_scaling = True
 include_images = False
 random_seed = 42
 
+# Change this generate a prediction on test
+predict_on_test = True
+
 # data paths
 train_text_path = r'./src_data/train.csv'
 train_images_folder = r'./src_data/train_profile_images'
@@ -71,13 +74,13 @@ class CustomTargetTransformer(BaseEstimator, TransformerMixin):
 
     def inverse_transform(self, target):
         # Scale target back
-        scaled_target = (self.power_transformer.inverse_transform(target.reshape(-1,1)) - 1)
+        scaled_target = (self.power_transformer.inverse_transform(target.reshape(-1,1)) - 1).astype(int)
         
         # Make sure scaled back targets are not negatives!
-        idexes = np.nonzero(scaled_target < 0)
-        scaled_target[idexes] = 0
+        indexes = np.nonzero(scaled_target <= 0)
+        scaled_target[indexes] = 0
 
-        return scaled_target.reshape(-1).astype(int)
+        return scaled_target.reshape(-1)
     
     
 
@@ -89,7 +92,10 @@ def create_pipeline(use_scaling=True,
    
     # using scaling
     if use_scaling:
-        x_scaler=StandardScaler()
+        # TODO: Try other scalers/Transformers...
+#        x_scaler = StandardScaler()
+#        x_scaler = QuantileTransformer(n_quantiles=9, output_distribution='normal')
+        x_scaler = RobustScaler()
         pipe_X = make_pipeline((x_scaler),
                                (regressor))
     else:
@@ -135,85 +141,6 @@ def main():
     # -- Data Transformer --
     data_transformer = HAL9001DataTransformer()
 
-
-    # -- Split ids to train/valid --
-    """
-    data_X, data_y = load_x_y_from_loaders(images_loader=images_loader,
-                                           text_data_loader=text_data_loader,
-                                           data_transformer=data_transformer,
-                                           transform_only=False, # TODO Fit and Transform
-                                           image_input_name=IMAGE_INPUT_NAME,
-                                           text_features_input_name=TEXT_FEATURES_INPUT_NAME,
-                                           output_name=OUTPUT_NAME,
-                                           profiles_ids_list=None, # Load all profiles in data
-                                           include_images=include_images)
-
-    if include_images:
-        train_X1, valid_X1, train_X2, valid_X2, train_y, valid_y = train_test_split(data_X[IMAGE_INPUT_NAME],
-                                                                                 data_X[TEXT_FEATURES_INPUT_NAME],
-                                                                                data_y[OUTPUT_NAME],
-                                                                                test_size = .2,
-                                                                                random_state=42,
-                                                                                shuffle=True)
-
-        # Put data back as dict (Need this for NN)
-        train_X=dict({IMAGE_INPUT_NAME: train_X1,
-                    TEXT_FEATURES_INPUT_NAME:train_X2})
-        train_y=dict({OUTPUT_NAME: train_y})
-        valid_X=dict({IMAGE_INPUT_NAME: valid_X1,
-                    TEXT_FEATURES_INPUT_NAME:valid_X2})
-        valid_y=dict({OUTPUT_NAME: valid_y})
-    else:
-        train_X, valid_X, train_y, valid_y = train_test_split(data_X[TEXT_FEATURES_INPUT_NAME],
-                                                              data_y[OUTPUT_NAME],
-                                                              test_size = .2,
-                                                              random_state=42,
-                                                              shuffle=True)
-        # Put data back as dict (Need this for NN)
-        train_X=dict({TEXT_FEATURES_INPUT_NAME:train_X})
-        train_y=dict({OUTPUT_NAME: train_y})
-        valid_X=dict({TEXT_FEATURES_INPUT_NAME:valid_X})
-        valid_y=dict({OUTPUT_NAME: valid_y})
-
-
-    # TODO using scaling
-    if use_scaling:
-        sc_x = StandardScaler()
-        pt_cox_y = PowerTransformer(method='box-cox', standardize=False)
-    
-        # Fit and Transform on Train
-        train_X[TEXT_FEATURES_INPUT_NAME] = sc_x.fit_transform(train_X[TEXT_FEATURES_INPUT_NAME])
-        train_y[OUTPUT_NAME] = pt_cox_y.fit_transform((train_y[OUTPUT_NAME] + 1).reshape(-1, 1))
-    
-        # Transform only on Valid
-        valid_X[TEXT_FEATURES_INPUT_NAME] = sc_x.transform(valid_X[TEXT_FEATURES_INPUT_NAME])
-        valid_y[OUTPUT_NAME] = pt_cox_y.transform((valid_y[OUTPUT_NAME] + 1).reshape(-1, 1))
-
-
-    # -- DEBUG linear regression on text features --
-    from sklearn.linear_model import LinearRegression
-    X= train_X[TEXT_FEATURES_INPUT_NAME]
-    y= train_y[OUTPUT_NAME]
-    reg = LinearRegression().fit(X, y)
-    print('\nLinear reg score: {:}'.format(reg.score(X, y)))
-    # -- DEBUG --
-
-    
-
-    # -- Prepare train/valid sets for non NN models --
-    print('\n\nPredicting on validation set')
-    train_values_X= train_X[TEXT_FEATURES_INPUT_NAME]
-    train_values_y= train_y[OUTPUT_NAME].reshape(-1)
-
-    valid_values_X= valid_X[TEXT_FEATURES_INPUT_NAME]
-    valid_values_y= valid_y[OUTPUT_NAME].reshape(-1)
-
-    print('Train shape {:} {:}'.format(train_values_X.shape, train_values_y.shape))
-    print('Valid shape {:} {:}'.format(valid_values_X.shape, valid_values_y.shape))
-
-
-    """
-
     # -- Prepare Train data X, y --
     print('\n\nEvaluating on Train data using k-fold-CV')
     data_X, data_y = load_x_y_from_loaders(images_loader=images_loader,
@@ -235,15 +162,21 @@ def main():
         
     # GBR With best searched hyper parms
     print('GradientBoostingRegressor')
-    gbr = GradientBoostingRegressor(n_estimators=200,
-                                    max_features=None,
-                                    max_depth=3,
-                                    min_samples_split=2,
-                                    min_samples_leaf=10,
+    # RandSearchCV params
+    #{'regressor__gradientboostingregressor__max_depth': 4,
+    # 'regressor__gradientboostingregressor__n_estimators': 100,
+    # 'regressor__gradientboostingregressor__max_features': 'auto',
+    # 'regressor__gradientboostingregressor__min_samples_leaf': 20,
+    # 'regressor__gradientboostingregressor__min_samples_split': 16}
+    # # RandSearchCV Score -1.722821758493802
+    gbr = GradientBoostingRegressor(n_estimators=100,
+                                    max_features='auto',
+                                    max_depth=4,
+                                    min_samples_split=16,
+                                    min_samples_leaf=20,
                                     random_state=random_seed)
 
-    
-    # Pipeline (Has scaling, power_transform and regressor inside)
+    # -- Pipeline (Has scaling, power_transform and regressor inside) --
     pipe = create_pipeline(use_scaling=True,
                            regressor=gbr)
 
@@ -277,52 +210,53 @@ def main():
 
 
     # -- Predict on Test set ---
-    print('\n\nPredicting on Test data')
+    if predict_on_test:
+        print('\n\nPredicting on Test data')
 
-    # -- Preare Test data  X, y --
-    test_profiles_ids_list = test_text_data_loader.get_orig_features()['Id'].values
-    test_X = load_x_y_from_loaders(images_loader=test_images_loader,
-                                text_data_loader=test_text_data_loader,
-                                data_transformer=data_transformer,
-                                transform_only=False, # TODO Transform only (Not implemented yet, use fit_transform)
-                                image_input_name=IMAGE_INPUT_NAME,
-                                text_features_input_name=TEXT_FEATURES_INPUT_NAME,
-                                output_name=OUTPUT_NAME,
-                                profiles_ids_list=test_profiles_ids_list,
-                                include_images=include_images)
-    # No Need for dict for the moment
-    test_X = test_X[TEXT_FEATURES_INPUT_NAME]
+        # -- Preare Test data  X, y --
+        test_profiles_ids_list = test_text_data_loader.get_orig_features()['Id'].values
+        test_X = load_x_y_from_loaders(images_loader=test_images_loader,
+                                    text_data_loader=test_text_data_loader,
+                                    data_transformer=data_transformer,
+                                    transform_only=False, # TODO Transform only (Not implemented yet, use fit_transform)
+                                    image_input_name=IMAGE_INPUT_NAME,
+                                    text_features_input_name=TEXT_FEATURES_INPUT_NAME,
+                                    output_name=OUTPUT_NAME,
+                                    profiles_ids_list=test_profiles_ids_list,
+                                    include_images=include_images)
+        # No Need for dict for the moment
+        test_X = test_X[TEXT_FEATURES_INPUT_NAME]
 
-    print('Test shape {:}'.format(test_X.shape))
+        print('Test shape {:}'.format(test_X.shape))
 
-    # -- Fit pipe (Transofrmation and model) on all Train data set --
-    pipe.fit(data_X, data_y)
+        # -- Fit pipe (Transofrmation and model) on all Train data set --
+        pipe.fit(data_X, data_y)
 
-    # -- Predict on Test set --
-    test_pred_y = pipe.predict(test_X)
+        # -- Predict on Test set --
+        test_pred_y = pipe.predict(test_X)
 
-    # Store test set predictions in DataFrame and save to file
-    test_pd = pd.DataFrame()
-    test_pd['Id'] = test_profiles_ids_list
-    test_pd['Predicted'] = test_pred_y
+        # Store test set predictions in DataFrame and save to file
+        test_pd = pd.DataFrame()
+        test_pd['Id'] = test_profiles_ids_list
+        test_pd['Predicted'] = test_pred_y
 
-    # ***********************   IMPORTANT:  ************************
-    # Make sure to push your code to github to keep track of the code
-    # used to make the predictions. This is very important to be able
-    # to reproduce the predictions and track the models used. Make sure
-    # to update the sumbmission csv file in submissions folder, add a
-    # comment about the model, the features used the new transformations
-    # done to the data and any other relevent information. Don't forget
-    # to add the prediction file itself to the subfolder submissions\pred_files.
-    # Also, name the prediction file based on the model, date, git version...
-    test_tosubmit_folder = os.path.join(log_folder,'vx-GradientBoostingRegressor-MoreNewfeature-Hyperparams')
-    # Create log folder if does not exist
-    if not Path(test_tosubmit_folder).exists():
-        os.mkdir(test_tosubmit_folder)
-    test_name = 'GBReg-HyperParams-MoreNewFeature-RandState42-CoxBoxY-gitversion-xxxx-2020-12-02-PIPE'
-    prediction_file_save_path = os.path.join(test_tosubmit_folder, test_name+'.csv')
-    print('\nSaving prediction to "{:}"'.format(prediction_file_save_path))
-    test_pd.to_csv(prediction_file_save_path, sep=',', index=False)
+        # ***********************   IMPORTANT:  ************************
+        # Make sure to push your code to github to keep track of the code
+        # used to make the predictions. This is very important to be able
+        # to reproduce the predictions and track the models used. Make sure
+        # to update the sumbmission csv file in submissions folder, add a
+        # comment about the model, the features used the new transformations
+        # done to the data and any other relevent information. Don't forget
+        # to add the prediction file itself to the subfolder submissions\pred_files.
+        # Also, name the prediction file based on the model, date, git version...
+        test_tosubmit_folder = os.path.join(log_folder,'v10-GradientBoostingRegressor-ExtensiveHyperParmSearch-Hyperparams')
+        # Create log folder if does not exist
+        if not Path(test_tosubmit_folder).exists():
+            os.mkdir(test_tosubmit_folder)
+        test_name = 'GBReg-ExtensiveHyperParmSearch-RandState42-CoxBoxY-gitversion-xxxx-2020-12-02-PIPE'
+        prediction_file_save_path = os.path.join(test_tosubmit_folder, test_name+'.csv')
+        print('\nSaving prediction to "{:}"'.format(prediction_file_save_path))
+        test_pd.to_csv(prediction_file_save_path, sep=',', index=False)
 
 
 if __name__ == '__main__':
