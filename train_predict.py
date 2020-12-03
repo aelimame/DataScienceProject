@@ -170,11 +170,11 @@ def main():
     # 'regressor__gradientboostingregressor__min_samples_split': 16}
     # # RandSearchCV Score -1.722821758493802
     gbr = GradientBoostingRegressor(n_estimators=100,
-                                    max_features='auto',
-                                    max_depth=4,
-                                    min_samples_split=16,
-                                    min_samples_leaf=20,
-                                    random_state=random_seed)
+                                max_features='sqrt',
+                                max_depth=5,
+                                min_samples_split=2,
+                                min_samples_leaf=7,
+                                random_state=42)
 
     # -- Pipeline (Has scaling, power_transform and regressor inside) --
     pipe = create_pipeline(use_scaling=True,
@@ -249,11 +249,11 @@ def main():
         # done to the data and any other relevent information. Don't forget
         # to add the prediction file itself to the subfolder submissions\pred_files.
         # Also, name the prediction file based on the model, date, git version...
-        test_tosubmit_folder = os.path.join(log_folder,'v10-GradientBoostingRegressor-ExtensiveHyperParmSearch-Hyperparams')
+        test_tosubmit_folder = os.path.join(log_folder,'v11-GBReg-OutliersRemoved-ImputersimilarV7')
         # Create log folder if does not exist
         if not Path(test_tosubmit_folder).exists():
             os.mkdir(test_tosubmit_folder)
-        test_name = 'GBReg-ExtensiveHyperParmSearch-RandState42-CoxBoxY-gitversion-xxxx-2020-12-02-PIPE'
+        test_name = 'GBReg-OutliersRemoved-ImputersimilarV7-RandState42-CoxBoxY-gitversion-xxxx-2020-12-03'
         prediction_file_save_path = os.path.join(test_tosubmit_folder, test_name+'.csv')
         print('\nSaving prediction to "{:}"'.format(prediction_file_save_path))
         test_pd.to_csv(prediction_file_save_path, sep=',', index=False)

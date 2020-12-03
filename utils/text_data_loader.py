@@ -50,7 +50,7 @@ class TextDataLoader():
     # Return orignal data (entire dataframe)
     def get_orig_features(self):
         if self.is_data_loaded:
-            return self.orig_data
+            return self.orig_data.copy()
         return None
 
 
