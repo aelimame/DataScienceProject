@@ -49,7 +49,7 @@ def ImageAndTextModel(image_height, image_width, image_nbr_channels, nbr_text_fe
     kern_init = 'glorot_uniform'
     image_cnn = image_input
 #    image_cnn = LayerNormalization()(image_cnn)
-    image_cnn = Conv2D(8, kernel_size=(3,3), strides=(1,1), activation='relu', padding='same', kernel_initializer=kern_init)(image_cnn)
+    image_cnn = Conv2D(32, kernel_size=(3,3), strides=(1,1), activation='relu', padding='same', kernel_initializer=kern_init)(image_cnn)
     image_cnn = MaxPooling2D(pool_size=(2,2))(image_cnn)
     image_cnn = Conv2D(16, kernel_size=(3,3), strides=(1,1), activation='relu', padding='same', kernel_initializer=kern_init)(image_cnn)
     image_cnn = MaxPooling2D(pool_size=(2,2))(image_cnn)
@@ -69,11 +69,13 @@ def ImageAndTextModel(image_height, image_width, image_nbr_channels, nbr_text_fe
 
 
     # Merge all available features into a single large vector via concatenation
-    x = Concatenate(name='merge')([image_out, text_features_out])
+    #x = image_out # TODO test image only
+    x = Concatenate(name='merge')([image_out, text_features_out]) # TODO uncomment to use image + text features
+    
 
     # Dense layers
 #    x = LayerNormalization()(x)
-    x = Dropout(0.5)(x)
+#    x = Dropout(0.5)(x)
     x = Dense(64, activation='relu', kernel_initializer=kern_init)(x)
     x = Dropout(0.5)(x)
     x = Dense(32, activation='relu', kernel_initializer=kern_init)(x)
