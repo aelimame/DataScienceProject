@@ -35,7 +35,7 @@ OUTPUT_NAME = 'likes'
 # params
 use_scaling_for_X = True
 use_scaling_for_y = False # TODO Don't use with loss RMSLE!?
-include_images = False
+include_images = True
 random_seed = 42
 
 # Change this generate a prediction on test
