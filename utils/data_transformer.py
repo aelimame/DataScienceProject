@@ -11,15 +11,28 @@ NUM_LANGUAGES_TO_FEATUREIZE = 9
 ACCOUNT_AGE_SINCE_DATE = dt.datetime(2021, 1, 1) # Jan 1st, 2021 is the date we measure account "age" from
 UTC_FOR_NA = -5898.887938 # Mean from Train data analysis
 
+# TODO Hardcoded outliers limits (Based on manuel data analysis for the moment)
+mum_profile_likes_upper_limit = 200000
+num_followers_lower_limit = 0
+num_followers_upper_limit = 45000000
+num_people_following_lower_limit = 0
+num_people_following_upper_limit = 550000
+num_status_updates_lower_limit = 0
+num_status_updates_upper_limit = 1500000
+num_direct_messages_lower_limit = 0
+num_direct_messages_upper_limit=75000
+avg_daily_profile_clicks_lower_limit = 0
+avg_daily_profile_clicks_upper_limit = 17
+
+
 COLUMNS_TO_DROP = ['User Name', 'Profile Image', 'User Time Zone']
 COLOUR_COLUMNS = ['Profile Text Color', 'Profile Page Color', 'Profile Theme Color']
 BOOLEAN_COLUMNS = ['Is Profile View Size Customized?', 'Location Public Visibility']
 
 class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerMixin?
-    def __init__(self, min_likes_cutoff=80000, verbose = False):
+    def __init__(self, verbose = False):
         self.verbose = verbose
         self.mvf = MissingValuesFiller()
-        self.min_likes_cutoff = min_likes_cutoff
 
     # TODO make it work like fit_transform and transform of sklearn to use pipelines...
     def fit_transform(self, input_df):
@@ -31,8 +44,10 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
         # TODO Hard coded for now. Remove outiliers using IQR or other techniques
         # TODO lower limit? ==0?
         if 'Num of Profile Likes' in self.df:
-            self.df = self.df[self.df['Num of Profile Likes'] < self.min_likes_cutoff]
-            #return self.df[self.df['Num of Profile Likes'] > 1]
+            self.df = self.df[self.df['Num of Profile Likes'] < mum_profile_likes_upper_limit]
+            #self.df['Num of Profile Likes'] = self.df['Num of Profile Likes'].clip(upper=80000)
+            #self.df[self.df['Num of Profile Likes']['Num of Profile Likes'] < 5] = 5
+            return self.df
 
         return self.df
 
@@ -54,6 +69,18 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
         self.remove_columns()
         # More cleaning?
         return self.df
+
+    def handle_outliers(self, df, col_name, lower_limit, upper_limit, remove=False):
+        # Remove
+        if remove:
+            outliers = df[((df[col_name] > upper_limit) | (df[col_name] < lower_limit))]
+            print('Droped {:} outilers. Based on column {:}'.format(len(outliers), col_name))
+            df = df.drop(outliers.index)
+        # Clip ?
+        else:
+            df[col_name] = df[col_name].clip(lower_limit, upper_limit)
+
+        return df
 
     def split_colour_column(self, column_name):
         def parse_color(two_char_code):
@@ -86,13 +113,13 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
         # Using a random number between -8 UTC and + 10 UTC because that encompases most of the
         # land mass of the Earth.
 #        self.df['UTC Offset'] = self.df['UTC Offset'].fillna( np.random.randint( -8, 11 )*60*60 )
-        self.df['UTC Offset'] = self.df['UTC Offset'].fillna(UTC_FOR_NA)
+#        self.df['UTC Offset'] = self.df['UTC Offset'].fillna(UTC_FOR_NA)
 
         # floor so we group 1/2 hour offsets
-        self.df['UTC Offset'] = np.floor((self.df['UTC Offset']/60/60)).astype(int)
+#        self.df['UTC Offset'] = np.floor((self.df['UTC Offset']/60/60)).astype(int)
 
 #        one_hot_categories = pd.get_dummies(self.df['UTC Offset'], prefix='UTC Offset')
-#        self.df.drop('UTC Offset', axis=1, inplace=True)
+        self.df.drop('UTC Offset', axis=1, inplace=True)
 #        self.df = self.df.join(one_hot_categories)
 
 		# Ensure all the important columns are there
@@ -102,9 +129,37 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
 
         return self.df
 
+    # func that returns a dummified DataFrame of significant dummies in a given column
+    # Ref: https://stackoverflow.com/questions/18016495/get-subset-of-most-frequent-dummy-variables-in-pandas
+    def to_dummies_top_n(self, dummy_col, threshold=0.1):
+
+        # removes the bind
+        dummy_col = dummy_col.copy()
+
+        # what is the ratio of a dummy in whole column
+        count = pd.value_counts(dummy_col) / len(dummy_col)
+
+        # cond whether the ratios is higher than the threshold
+        mask = dummy_col.isin(count[count > threshold].index)
+
+        # replace the ones which ratio is lower than the threshold by a special name
+        dummy_col[~mask] = "others"
+
+        return pd.get_dummies(dummy_col, prefix=dummy_col.name)
+
+
+    def engineer_usr_time_zone(self): # TODO: ignored for the moment
+        col_name = 'User Time Zone'
+        #one_hot_categories = pd.get_dummies(self.df['User Time Zone'], prefix='usr_tz') # TODO same categories names for Testset!
+        one_hot_categories = self.to_dummies_top_n(self.df['User Time Zone'], threshold=0.01)
+        self.df.drop('User Time Zone', axis=1, inplace=True)
+        self.df = self.df.join(one_hot_categories)
+        return self.df
+
+
     def engineer_location(self):
         # For now, just set a flag if the location is empty
-        self.df['Has Location'] = self.df['Location'].apply(lambda location: False if pd.isnull(location) else True )
+#        self.df['Has Location'] = self.df['Location'].apply(lambda location: False if pd.isnull(location) else True )
         # TODO: Use geocoding results to add more info?
         self.df.drop('Location', axis=1, inplace=True)
         return self.df
@@ -112,16 +167,25 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
     def engineer_profile_category(self):
         self.df['Profile Category'] = self.df['Profile Category'].replace(r'^\s*$', 'unknown', regex=True)
         if 'Num of Status Updates' in self.df:
-            self.df = self.mvf.fill_missing_values(self.df, 'Profile Category', 'unknown', 'Num of Status Updates', 20)
+            self.df = self.mvf.fill_missing_values(self.df, 'Profile Category', 'unknown', 'Num of Status Updates', 1)
+
+#        # Empty category to bots :) ? Based on data analysis?
+#        self.df['Profile Category'] = self.df['Profile Category'].replace(r'^\s*$', 'bots', regex=True)
+
         one_hot_categories = pd.get_dummies(self.df['Profile Category'], prefix='Category')
         self.df.drop('Profile Category', axis=1, inplace=True)
         self.df = self.df.join(one_hot_categories)
         return self.df
 
     def engineer_profile_verification_status(self):
-        #self.df['Profile Verification Status'] = self.df['Profile Verification Status'].replace('Pending', 'Not verified', regex=True)
-        #self.df['Profile Verification Status'] = self.df['Profile Verification Status'].apply(lambda val: True if val == 'Verified' else False)
-        self.df['Profile Verification Status'] = self.df['Profile Verification Status'].apply(lambda val: 1 if val == 'Verified' else (-1 if val == 'Pending' else 0))
+#        self.df['Profile Verification Status'] = self.df['Profile Verification Status'].replace('Pending', 'Not verified', regex=True)
+#        self.df['Profile Verification Status'] = self.df['Profile Verification Status'].apply(lambda val: True if val == 'Verified' else False)
+#        self.df['Profile Verification Status'] = self.df['Profile Verification Status'].apply(lambda val: 1 if val == 'Verified' else (-1 if val == 'Pending' else 0))
+#        return self.df
+
+        one_hot_categories = pd.get_dummies(self.df['Profile Verification Status'], prefix='Verification_Status')
+        self.df.drop('Profile Verification Status', axis=1, inplace=True)
+        self.df = self.df.join(one_hot_categories)
         return self.df
 
     def engineer_profile_cover_image_status(self):
@@ -147,6 +211,53 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
         # TODO: What's better for fillNA here?
         col_name = 'Avg Daily Profile Visit Duration in seconds'
         self.df[col_name] = self.df[col_name].fillna(self.df[col_name].mean())
+        # TODO No outlier to Remove
+        return self.df
+
+    def engineer_num_of_follower(self):
+        col_name = 'Num of Followers'
+        # TODO Remove outliers (Hard coded based on data analysis for now) need to be in fit/transform
+        # Only for train data
+        if 'Num of Profile Likes' in self.df:
+            lower_limit = 0
+            upper_limit = num_followers_upper_limit
+            self.df = self.handle_outliers(self.df, col_name, lower_limit, upper_limit)
+        return self.df
+
+    def engineer_num_of_people_following(self):
+        col_name = 'Num of People Following'
+        # TODO Remove outliers (Hard coded based on data analysis for now) need to be in fit/transform
+        # Only for train data
+        if 'Num of Profile Likes' in self.df:
+            lower_limit = num_people_following_lower_limit
+            upper_limit = num_people_following_upper_limit
+            self.df = self.handle_outliers(self.df, col_name, lower_limit, upper_limit)
+        return self.df
+
+    def engineer_num_of_status_updates(self):
+        col_name = 'Num of Status Updates'
+
+        #tmp = pd.qcut(self.df[col_name], 4, labels=["low", "medium", "high", "very high"])
+        #one_hot = pd.get_dummies(tmp, prefix="Status_Updates")
+        #self.df = self.df.drop([col_name], axis=1)
+        #self.df = self.df.join(one_hot)
+
+        # TODO Remove outliers (Hard coded based on data analysis for now) need to be in fit/transform
+        # Only for train data
+        if 'Num of Profile Likes' in self.df:
+            lower_limit = num_status_updates_lower_limit
+            upper_limit = num_status_updates_upper_limit
+            self.df = self.handle_outliers(self.df, col_name, lower_limit, upper_limit)
+        return self.df
+    
+    def engineer_num_of_direct_messages(self):
+        col_name = 'Num of Direct Messages'
+        # TODO Remove outliers (Hard coded based on data analysis for now) need to be in fit/transform
+        # Only for train data
+        if 'Num of Profile Likes' in self.df:
+            lower_limit = num_direct_messages_lower_limit
+            upper_limit = num_direct_messages_upper_limit
+            self.df = self.handle_outliers(self.df, col_name, lower_limit, upper_limit)
         return self.df
 
     def engineer_avg_daily_profile_clicks(self):
@@ -154,18 +265,14 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
         # TODO: What's better for fillNA here?
         col_name = 'Avg Daily Profile Clicks'
         self.df[col_name] = self.df[col_name].fillna(self.df[col_name].mean())
+        # TODO Remove outliers (Hard coded based on data analysis for now) need to be in fit/transform
+        # Only for train data
+        if 'Num of Profile Likes' in self.df:
+            lower_limit = avg_daily_profile_clicks_lower_limit
+            upper_limit = avg_daily_profile_clicks_upper_limit
+            self.df = self.handle_outliers(self.df, col_name, lower_limit, upper_limit)
         return self.df
-
-    def engineer_num_of_status_updates(self):
-        col_name = 'Num of Status Updates'
-
-        tmp = pd.qcut(self.df[col_name], 4, labels=["low", "medium", "high", "very high"])
-        one_hot = pd.get_dummies(tmp, prefix="Status_Updates")
-        self.df = self.df.drop([col_name], axis=1)
-
-        self.df = self.df.join(one_hot)
-        return self.df
-
+    
     def engineer_profile_creation_timestamp(self):
         # Our dates come in the format:
         # Wed Jul 20 07:46:18 +0000 2011
@@ -192,6 +299,7 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
     def engineer(self):
         self.df = self.engineer_location()
         self.df = self.engineer_utc_offset()
+#        self.df = self.engineer_usr_time_zone()
         self.df = self.engineer_boolean_columns()
         self.df = self.engineer_colour_columns()
         self.df = self.engineer_personal_url()
@@ -202,7 +310,10 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
         self.df = self.engineer_user_language(NUM_LANGUAGES_TO_FEATUREIZE)
         self.df = self.engineer_avg_daily_visit_seconds()
         self.df = self.engineer_avg_daily_profile_clicks()
-        #self.df = self.engineer_num_of_status_updates()
+        self.df = self.engineer_num_of_status_updates()
+        self.df = self.engineer_num_of_follower()
+        self.df = self.engineer_num_of_people_following()
+        self.df = self.engineer_num_of_direct_messages()
         # More engineering ?
         return self.df
 

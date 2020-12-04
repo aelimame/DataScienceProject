@@ -1,13 +1,16 @@
-# TODO comment and refactor
-
 import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_log_error
 import numpy as np
 
 
-# RMSLE metric
+# TODO VERIFY RMSLE metric
 def rmsle(y_true, y_pred, sample_weight=None):
     return np.sqrt(mean_squared_log_error(y_true, y_pred, sample_weight))
+
+def rmsle_debug(y_true, y_pred, sample_weight=None):
+    y_true_log = np.log(np.clip(y_true, 0, None) + 1.)
+    y_pred_log = np.log(np.clip(y_pred, 0, None) + 1.)
+    return np.sqrt(np.mean(np.square(y_true_log - y_pred_log)))
 
 
 # Method to help load X and y from data loaders
@@ -69,33 +72,35 @@ def load_x_y_from_loaders(images_loader,
 
 # Method to plot learning curves of Keras model
 def plot_history(history):
-    err = history.history['mean_squared_error']
-    val_err = history.history['val_mean_squared_error']
-    err2 = history.history['mean_squared_logarithmic_error']
-    val_err2 = history.history['val_mean_squared_logarithmic_error']
+#    err = history.history['mean_squared_logarithmic_error']
+#    val_err = history.history['val_mean_squared_logarithmic_error']
+#    err2 = history.history['mean_squared_error']
+#    val_err2 = history.history['val_mean_squared_error']
     loss = history.history['loss']
     val_loss = history.history['val_loss']
-    x = range(1, len(err) + 1)
+    x = range(1, len(loss) + 1)
 
-    plt.figure(figsize=(16, 5))
-    plt.subplot(1, 3, 1)
+    plt.figure(figsize=(5, 5))
+#    plt.subplot(1, 2, 1)
     plt.plot(x, loss, 'b', label='Training loss')
     plt.plot(x, val_loss, 'r', label='Validation loss')
     plt.title('loss')
     #plt.ylim(-0.5, 3)
     plt.legend()
 
-    plt.subplot(1, 3, 2)
-    plt.plot(x, err, 'b', label='Training mean_squared_error')
-    plt.plot(x, val_err, 'r', label='Validation mean_squared_error')
-    plt.title('mean_squared_error')
-    plt.legend()
-
-    plt.subplot(1, 3, 3)
-    plt.plot(x, err2, 'b', label='Training mean_squared_logarithmic_error')
-    plt.plot(x, val_err2, 'r', label='Validation mean_squared_logarithmic_error')
+    """
+    plt.subplot(1, 2, 2)
+    plt.plot(x, err, 'b', label='Training mean_squared_logarithmic_error')
+    plt.plot(x, val_err, 'r', label='Validation mean_squared_logarithmic_error')
     plt.title('mean_squared_logarithmic_error')
     plt.legend()
+
+    plt.subplot(1, 3, 2)
+    plt.plot(x, err2, 'b', label='Training mean_squared_error')
+    plt.plot(x, val_err2, 'r', label='Validation mean_squared_error')
+    plt.title('mean_squared_error')
+    plt.legend()
+    """
 
     plt.show()
     
