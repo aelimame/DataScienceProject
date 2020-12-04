@@ -107,13 +107,13 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
         # Using a random number between -8 UTC and + 10 UTC because that encompases most of the
         # land mass of the Earth.
 #        self.df['UTC Offset'] = self.df['UTC Offset'].fillna( np.random.randint( -8, 11 )*60*60 )
-        self.df['UTC Offset'] = self.df['UTC Offset'].fillna(UTC_FOR_NA)
+#        self.df['UTC Offset'] = self.df['UTC Offset'].fillna(UTC_FOR_NA)
 
         # floor so we group 1/2 hour offsets
-        self.df['UTC Offset'] = np.floor((self.df['UTC Offset']/60/60)).astype(int)
+#        self.df['UTC Offset'] = np.floor((self.df['UTC Offset']/60/60)).astype(int)
 
 #        one_hot_categories = pd.get_dummies(self.df['UTC Offset'], prefix='UTC Offset')
-#        self.df.drop('UTC Offset', axis=1, inplace=True)
+        self.df.drop('UTC Offset', axis=1, inplace=True)
 #        self.df = self.df.join(one_hot_categories)
 
 		# Ensure all the important columns are there
@@ -125,7 +125,7 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
 
     def engineer_location(self):
         # For now, just set a flag if the location is empty
-        self.df['Has Location'] = self.df['Location'].apply(lambda location: False if pd.isnull(location) else True )
+#        self.df['Has Location'] = self.df['Location'].apply(lambda location: False if pd.isnull(location) else True )
         # TODO: Use geocoding results to add more info?
         self.df.drop('Location', axis=1, inplace=True)
         return self.df
@@ -146,7 +146,12 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
     def engineer_profile_verification_status(self):
 #        self.df['Profile Verification Status'] = self.df['Profile Verification Status'].replace('Pending', 'Not verified', regex=True)
 #        self.df['Profile Verification Status'] = self.df['Profile Verification Status'].apply(lambda val: True if val == 'Verified' else False)
-        self.df['Profile Verification Status'] = self.df['Profile Verification Status'].apply(lambda val: 1 if val == 'Verified' else (-1 if val == 'Pending' else 0))
+#        self.df['Profile Verification Status'] = self.df['Profile Verification Status'].apply(lambda val: 1 if val == 'Verified' else (-1 if val == 'Pending' else 0))
+#        return self.df
+
+        one_hot_categories = pd.get_dummies(self.df['Profile Verification Status'], prefix='Verification_Status')
+        self.df.drop('Profile Verification Status', axis=1, inplace=True)
+        self.df = self.df.join(one_hot_categories)
         return self.df
 
     def engineer_profile_cover_image_status(self):
