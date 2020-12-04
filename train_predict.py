@@ -13,11 +13,13 @@ import os
 from pathlib import Path
 from operator import itemgetter
 
+import xgboost as xgb
+
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import KFold, RepeatedKFold
 from sklearn.model_selection import cross_val_score
 from sklearn.preprocessing import StandardScaler, PowerTransformer, QuantileTransformer, RobustScaler, Normalizer
-from sklearn.ensemble import GradientBoostingRegressor, BaggingRegressor, RandomForestRegressor, AdaBoostRegressor
+from sklearn.ensemble import GradientBoostingRegressor, BaggingRegressor, RandomForestRegressor, AdaBoostRegressor, VotingRegressor
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import make_scorer
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -63,11 +65,11 @@ log_folder = 'logs'
 class CustomTargetTransformer(BaseEstimator, TransformerMixin):
     def __init__(self):
         self.power_transformer = PowerTransformer(method='box-cox', standardize=False)
-        
+
     def fit(self, target):
         self.power_transformer.fit((target + 1).reshape(-1, 1))
         return self
-    
+
     def transform(self, target):
         transformed_target = self.power_transformer.transform((target.astype(np.float64) + 1).reshape(-1, 1))
         return transformed_target.reshape(-1).astype(np.float64)
@@ -75,22 +77,22 @@ class CustomTargetTransformer(BaseEstimator, TransformerMixin):
     def inverse_transform(self, target):
         # Scale target back
         scaled_target = (self.power_transformer.inverse_transform(target.reshape(-1,1)) - 1).astype(int)
-        
+
         # Make sure scaled back targets are not negatives!
         #indexes = np.nonzero(scaled_target <= 0)
         #scaled_target[indexes] = 0
         scaled_target = np.clip(scaled_target, a_min=0, a_max=None)
 
         return scaled_target.reshape(-1)
-    
-    
+
+
 
 # Create a custom pipline that get a Regressor as parmeter and return a pipline
 # TODO include Dataloaders and HAL9001DataTansformer inside!
 def create_pipeline(use_scaling=True,
                     regressor=GradientBoostingRegressor()):
     # X pipeline
-   
+
     # using scaling
     if use_scaling:
         # TODO: Try other scalers/Transformers...
@@ -102,7 +104,7 @@ def create_pipeline(use_scaling=True,
     else:
         # X pipline with regressor only
         pipe_X = make_pipeline(regressor)
-    
+
     # y Transformer
     if use_scaling:
         model = TransformedTargetRegressor(regressor=pipe_X,
@@ -138,7 +140,7 @@ def main():
     print('Images shape: {:}'.format(test_images_loader.image_shape))
     # Test Text data loader
     test_text_data_loader = TextDataLoader(src_csv_file_path = test_text_path)
-    
+
     # -- Data Transformer --
     data_transformer = HAL9001DataTransformer()
 
@@ -160,9 +162,9 @@ def main():
     print('Data shape {:} {:}'.format(data_X.shape, data_y.shape))
 
     # -- Prepare pipeline --
-        
+
     # GBR With best searched hyper parms
-    print('GradientBoostingRegressor')
+    # print('GradientBoostingRegressor')
     # RandSearchCV params
     #{'regressor__gradientboostingregressor__max_depth': 4,
     # 'regressor__gradientboostingregressor__n_estimators': 100,
@@ -176,16 +178,28 @@ def main():
                                 min_samples_split=2,
                                 min_samples_leaf=7,
                                 random_state=42)
+    bagging_gbr = BaggingRegressor(base_estimator=gbr, random_state=42)
+
+    # xgboost
+    xgb_model = xgb.XGBRegressor(objective="reg:squaredlogerror",
+                                 eval_metric='rmsle',
+                                 max_depth=10,
+                                 eta=0.1,
+                                 random_state=42)
+    #bagging_xgb = BaggingRegressor(base_estimator=xgb_model, random_state=42)
+
+
+    #Voting regressor
+    voting_regressor = VotingRegressor([('BaggingGBR', bagging_gbr), ('XGB', xgb_model)], verbose=1, n_jobs=-1)
 
     # -- Pipeline (Has scaling, power_transform and regressor inside) --
     pipe = create_pipeline(use_scaling=True,
-                           regressor=gbr)
+                           regressor=voting_regressor)
 
     # -- KFold CV using scorer based on rmsle --
     scorer = make_scorer(rmsle, greater_is_better=False)
     kfoldcv = KFold(n_splits=10, random_state=random_seed, shuffle=True)
     rep_kfoldcv = RepeatedKFold(n_splits=10, n_repeats=3, random_state=random_seed)
-
 
     scores = cross_val_score(pipe,
                              data_X,
@@ -200,11 +214,11 @@ def main():
                              scoring=scorer,
                              cv=rep_kfoldcv,
                              n_jobs=-1)
-                             
+
     # -- Print score --
     print('K-Fold CV RMSLE: %.10f (%.5f)' % (np.mean(scores), np.std(scores)))
     print('Repeated K-Fold CV RMSLE: %.10f (%.5f)' % (np.mean(rep_scores), np.std(rep_scores)))
-    
+
 
 
 

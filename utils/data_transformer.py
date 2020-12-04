@@ -43,11 +43,11 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
 
         # TODO Hard coded for now. Remove outiliers using IQR or other techniques
         # TODO lower limit? ==0?
-        if 'Num of Profile Likes' in self.df:
-            self.df = self.df[self.df['Num of Profile Likes'] < mum_profile_likes_upper_limit]
+        #if 'Num of Profile Likes' in self.df:
+            #self.df = self.df[self.df['Num of Profile Likes'] < mum_profile_likes_upper_limit]
             #self.df['Num of Profile Likes'] = self.df['Num of Profile Likes'].clip(upper=80000)
             #self.df[self.df['Num of Profile Likes']['Num of Profile Likes'] < 5] = 5
-            return self.df
+            #return self.df
 
         return self.df
 
@@ -249,7 +249,7 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
             upper_limit = num_status_updates_upper_limit
             self.df = self.handle_outliers(self.df, col_name, lower_limit, upper_limit)
         return self.df
-    
+
     def engineer_num_of_direct_messages(self):
         col_name = 'Num of Direct Messages'
         # TODO Remove outliers (Hard coded based on data analysis for now) need to be in fit/transform
@@ -272,7 +272,7 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
             upper_limit = avg_daily_profile_clicks_upper_limit
             self.df = self.handle_outliers(self.df, col_name, lower_limit, upper_limit)
         return self.df
-    
+
     def engineer_profile_creation_timestamp(self):
         # Our dates come in the format:
         # Wed Jul 20 07:46:18 +0000 2011
