@@ -77,8 +77,9 @@ class CustomTargetTransformer(BaseEstimator, TransformerMixin):
         scaled_target = (self.power_transformer.inverse_transform(target.reshape(-1,1)) - 1).astype(int)
         
         # Make sure scaled back targets are not negatives!
-        indexes = np.nonzero(scaled_target <= 0)
-        scaled_target[indexes] = 0
+        #indexes = np.nonzero(scaled_target <= 0)
+        #scaled_target[indexes] = 0
+        scaled_target = np.clip(scaled_target, a_min=0, a_max=None)
 
         return scaled_target.reshape(-1)
     
@@ -249,11 +250,11 @@ def main():
         # done to the data and any other relevent information. Don't forget
         # to add the prediction file itself to the subfolder submissions\pred_files.
         # Also, name the prediction file based on the model, date, git version...
-        test_tosubmit_folder = os.path.join(log_folder,'v12-GBReg-OutliersRemoved-ImputersimilarV7-NoUtcNoLocation')
+        test_tosubmit_folder = os.path.join(log_folder,'v13-GBReg-OutliersClipped-ImputersimilarV7-NoUtcNoLocation')
         # Create log folder if does not exist
         if not Path(test_tosubmit_folder).exists():
             os.mkdir(test_tosubmit_folder)
-        test_name = 'GBReg-OutliersRemoved-ImputersimilarV7-NoUtcNoLocation-RandState42-CoxBoxY-gitversion-xxxx-2020-12-03'
+        test_name = 'GBReg-OutliersClipped-ImputersimilarV7-NoUtcNoLocation-RandState42-CoxBoxY-gitversion-xxxx-2020-12-04'
         prediction_file_save_path = os.path.join(test_tosubmit_folder, test_name+'.csv')
         print('\nSaving prediction to "{:}"'.format(prediction_file_save_path))
         test_pd.to_csv(prediction_file_save_path, sep=',', index=False)

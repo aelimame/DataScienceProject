@@ -47,7 +47,6 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
             self.df = self.df[self.df['Num of Profile Likes'] < mum_profile_likes_upper_limit]
             #self.df['Num of Profile Likes'] = self.df['Num of Profile Likes'].clip(upper=80000)
             #self.df[self.df['Num of Profile Likes']['Num of Profile Likes'] < 5] = 5
-
             return self.df
 
         return self.df
@@ -71,10 +70,17 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
         # More cleaning?
         return self.df
 
-    def remove_outliers(self, df, col_name, lower_limit, upper_limit):
-        outliers = df[((df[col_name] > upper_limit) | (df[col_name] < lower_limit))]
-        print('Droped {:} outilers. Based on column {:}'.format(len(outliers), col_name))
-        return df.drop(outliers.index)
+    def handle_outliers(self, df, col_name, lower_limit, upper_limit, remove=False):
+        # Remove
+        if remove:
+            outliers = df[((df[col_name] > upper_limit) | (df[col_name] < lower_limit))]
+            print('Droped {:} outilers. Based on column {:}'.format(len(outliers), col_name))
+            df = df.drop(outliers.index)
+        # Clip ?
+        else:
+            df[col_name] = df[col_name].clip(lower_limit, upper_limit)
+
+        return df
 
     def split_colour_column(self, column_name):
         def parse_color(two_char_code):
@@ -122,6 +128,34 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
 #        		self.df['UTC Offset_'+str(i)] = 0
 
         return self.df
+
+    # func that returns a dummified DataFrame of significant dummies in a given column
+    # Ref: https://stackoverflow.com/questions/18016495/get-subset-of-most-frequent-dummy-variables-in-pandas
+    def to_dummies_top_n(self, dummy_col, threshold=0.1):
+
+        # removes the bind
+        dummy_col = dummy_col.copy()
+
+        # what is the ratio of a dummy in whole column
+        count = pd.value_counts(dummy_col) / len(dummy_col)
+
+        # cond whether the ratios is higher than the threshold
+        mask = dummy_col.isin(count[count > threshold].index)
+
+        # replace the ones which ratio is lower than the threshold by a special name
+        dummy_col[~mask] = "others"
+
+        return pd.get_dummies(dummy_col, prefix=dummy_col.name)
+
+
+    def engineer_usr_time_zone(self): # TODO: ignored for the moment
+        col_name = 'User Time Zone'
+        #one_hot_categories = pd.get_dummies(self.df['User Time Zone'], prefix='usr_tz') # TODO same categories names for Testset!
+        one_hot_categories = self.to_dummies_top_n(self.df['User Time Zone'], threshold=0.01)
+        self.df.drop('User Time Zone', axis=1, inplace=True)
+        self.df = self.df.join(one_hot_categories)
+        return self.df
+
 
     def engineer_location(self):
         # For now, just set a flag if the location is empty
@@ -184,10 +218,10 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
         col_name = 'Num of Followers'
         # TODO Remove outliers (Hard coded based on data analysis for now) need to be in fit/transform
         # Only for train data
-        if 'Num of Status Updates' in self.df:
+        if 'Num of Profile Likes' in self.df:
             lower_limit = 0
             upper_limit = num_followers_upper_limit
-            self.df = self.remove_outliers(self.df, col_name, lower_limit, upper_limit)
+            self.df = self.handle_outliers(self.df, col_name, lower_limit, upper_limit)
         return self.df
 
     def engineer_num_of_people_following(self):
@@ -197,7 +231,7 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
         if 'Num of Profile Likes' in self.df:
             lower_limit = num_people_following_lower_limit
             upper_limit = num_people_following_upper_limit
-            self.df = self.remove_outliers(self.df, col_name, lower_limit, upper_limit)
+            self.df = self.handle_outliers(self.df, col_name, lower_limit, upper_limit)
         return self.df
 
     def engineer_num_of_status_updates(self):
@@ -213,7 +247,7 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
         if 'Num of Profile Likes' in self.df:
             lower_limit = num_status_updates_lower_limit
             upper_limit = num_status_updates_upper_limit
-            self.df = self.remove_outliers(self.df, col_name, lower_limit, upper_limit)
+            self.df = self.handle_outliers(self.df, col_name, lower_limit, upper_limit)
         return self.df
     
     def engineer_num_of_direct_messages(self):
@@ -223,7 +257,7 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
         if 'Num of Profile Likes' in self.df:
             lower_limit = num_direct_messages_lower_limit
             upper_limit = num_direct_messages_upper_limit
-            self.df = self.remove_outliers(self.df, col_name, lower_limit, upper_limit)
+            self.df = self.handle_outliers(self.df, col_name, lower_limit, upper_limit)
         return self.df
 
     def engineer_avg_daily_profile_clicks(self):
@@ -236,7 +270,7 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
         if 'Num of Profile Likes' in self.df:
             lower_limit = avg_daily_profile_clicks_lower_limit
             upper_limit = avg_daily_profile_clicks_upper_limit
-            self.df = self.remove_outliers(self.df, col_name, lower_limit, upper_limit)
+            self.df = self.handle_outliers(self.df, col_name, lower_limit, upper_limit)
         return self.df
     
     def engineer_profile_creation_timestamp(self):
@@ -265,6 +299,7 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
     def engineer(self):
         self.df = self.engineer_location()
         self.df = self.engineer_utc_offset()
+#        self.df = self.engineer_usr_time_zone()
         self.df = self.engineer_boolean_columns()
         self.df = self.engineer_colour_columns()
         self.df = self.engineer_personal_url()
