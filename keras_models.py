@@ -30,7 +30,7 @@ def TextOnlyModel(nbr_text_features, text_features_input_name, output_name):
     text_features = Dropout(0.25)(text_features)
     text_features = Dense(256, activation='relu', kernel_initializer=kern_init)(text_features)
     text_features = Dropout(0.25)(text_features)
-    text_features = Dense(512, activation='relu', kernel_initializer=kern_init)(text_features)
+    text_features = Dense(2014, activation='relu', kernel_initializer=kern_init)(text_features)
     text_features = Dropout(0.25)(text_features)
     text_features_out = text_features
 
