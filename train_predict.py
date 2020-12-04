@@ -186,11 +186,11 @@ def main():
                                  max_depth=10,
                                  eta=0.1,
                                  random_state=42)
-    #bagging_xgb = BaggingRegressor(base_estimator=xgb_model, random_state=42)
+    bagging_xgb = BaggingRegressor(base_estimator=xgb_model, random_state=42)
 
 
     #Voting regressor
-    voting_regressor = VotingRegressor([('BaggingGBR', bagging_gbr), ('XGB', xgb_model)], verbose=1, n_jobs=-1)
+    voting_regressor = VotingRegressor([('BaggingGBR', bagging_gbr), ('XGB', bagging_xgb)], verbose=1, n_jobs=-1)
 
     # -- Pipeline (Has scaling, power_transform and regressor inside) --
     pipe = create_pipeline(use_scaling=True,
