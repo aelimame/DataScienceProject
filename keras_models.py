@@ -26,11 +26,11 @@ def TextOnlyModel(nbr_text_features, text_features_input_name, output_name):
     text_features = text_features_input
     text_features = Dense(nbr_text_features, activation='relu', kernel_initializer=kern_init)(text_features)
     text_features = Dropout(0.25)(text_features)
-    text_features = Dense(64, activation='relu', kernel_initializer=kern_init)(text_features)
-    text_features = Dropout(0.25)(text_features)
     text_features = Dense(256, activation='relu', kernel_initializer=kern_init)(text_features)
     text_features = Dropout(0.25)(text_features)
-    text_features = Dense(2014, activation='relu', kernel_initializer=kern_init)(text_features)
+    text_features = Dense(1024, activation='relu', kernel_initializer=kern_init)(text_features)
+    text_features = Dropout(0.25)(text_features)
+    text_features = Dense(2048, activation='relu', kernel_initializer=kern_init)(text_features)
     text_features = Dropout(0.25)(text_features)
     text_features_out = text_features
 
@@ -116,9 +116,11 @@ def ImageAndTextModel(image_height, image_width, image_nbr_channels, nbr_text_fe
     text_features = text_features_input
     text_features = Dense(nbr_text_features, activation='relu', kernel_initializer=kern_init)(text_features)
     text_features = Dropout(0.25)(text_features)
-    text_features = Dense(64, activation='relu', kernel_initializer=kern_init)(text_features)
+    text_features = Dense(256, activation='relu', kernel_initializer=kern_init)(text_features)
     text_features = Dropout(0.25)(text_features)
-    text_features = Dense(128, activation='relu', kernel_initializer=kern_init)(text_features)
+    text_features = Dense(1024, activation='relu', kernel_initializer=kern_init)(text_features)
+    text_features = Dropout(0.25)(text_features)
+    text_features = Dense(2048, activation='relu', kernel_initializer=kern_init)(text_features)
     text_features = Dropout(0.25)(text_features)
     text_features_out = text_features
 

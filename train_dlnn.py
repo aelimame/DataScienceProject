@@ -35,7 +35,7 @@ OUTPUT_NAME = 'likes'
 # params
 use_scaling_for_X = True
 use_scaling_for_y = False # TODO Don't use with loss RMSLE!?
-include_images = False
+include_images = True
 random_seed = 42
 
 # Change this generate a prediction on test
@@ -51,7 +51,7 @@ log_folder = 'logs'
 # Model Hyper-params TODO move to json file? for better modularity and tracking
 learning_rate = 0.002
 training_batch_size = 32 #32
-n_epochs = 35
+n_epochs = 17
 
 # GPU specific
 #os.environ['CUDA_VISIBLE_DEVICES']='1'
