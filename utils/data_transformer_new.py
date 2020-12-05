@@ -58,23 +58,20 @@ class ColorsTransformer( BaseEstimator, TransformerMixin ):
 class LanguagesTransformer( BaseEstimator, TransformerMixin ):
     def __init__( self, feature_names, num_languages_to_featureize = DEFAULT_NUM_LANGUAGES_TO_FEATUREIZE ):
         self._feature_names = feature_names
+        self._num_languages_to_featureize
 
     def fit( self, X, y = None ):
         # Drop any country code (e.g. "en-gb" -> "en")
-        X[self._feature_names] = X[self._feature_names].apply(lambda strVal: strVal[0:2].lower() )
+        X['Language'] = X['Language'].apply(lambda strVal: strVal[0:2].lower() )
         # Find the top n languages
-        self._top_n_languages = X[self._feature_names].value_counts(normalize=True).keys().values[0:n]
+        self._top_n_languages = X['Language'].value_counts(normalize=True).keys().values[0:self._num_languages_to_featureize]
         return self
 
     def transform( self, X, y = None ):
         # Drop any country code (e.g. "en-gb" -> "en")
-        X[self._feature_names] = X[self._feature_names].apply(lambda strVal: strVal[0:2].lower() )
+        X['Language'] = X['Language'].apply(lambda strVal: strVal[0:2].lower() )
          # If User Language is other than one of the top n languages, replace it with "other"
-        X[self._feature_names] = X[self._feature_names].apply(lambda strVal: strVal[0:2] if ( strVal[0:2] in self._top_n_languages ) else "other" )
-        # One-hot vector for each of top N languages
-        one_hot_top_n_languages = pd.get_dummies(X[self._feature_names], prefix='Language')
-        X.drop(self._feature_names, axis=1, inplace=True)
-        X = X.join(one_hot_top_n_languages)
+        X['Language'] = X['Language'].apply(lambda strVal: strVal[0:2] if ( strVal[0:2] in self._top_n_languages ) else "other" )
         return X.values
 
 #Custom Transformer that modifies location columns
@@ -249,7 +246,6 @@ numerical_features   = ['Avg Daily Profile Visit Duration in seconds', 'Avg Dail
                         'Num of Followers', 'Num of People Following', 'Num of Direct Messages']
 
 
-
 #Defining the steps in the colors pipeline
 colors_pipeline    = Pipeline( steps = [ ( 'colors_transformer',    ColorsTransformer(    color_features    ) ) ] )
 language_pipeline  = Pipeline( steps = [ ( 'languages_transformer', LanguagesTransformer( language_features ) ) ] )
@@ -268,7 +264,8 @@ numerical_pipeline   = Pipeline( steps = [ ( 'num_transformer', NumericalTransfo
 
 #Combining numerical and categorical piepline into one full big pipeline horizontally
 #using FeatureUnion
-full_pipeline = FeatureUnion( transformer_list = [ ( 'colors_pipeline',      colors_pipeline      ),
+HAL9001DataTransformer = FeatureUnion( transformer_list = [
+                                                   ( 'colors_pipeline',      colors_pipeline      ),
                                                    ( 'language_pipeline',    language_pipeline    ),
                                                    ( 'location_pipleline',   location_pipleline   ),
                                                    ( 'textual_pipleline',    textual_pipleline    ),
