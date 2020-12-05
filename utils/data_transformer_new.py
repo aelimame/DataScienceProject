@@ -6,19 +6,26 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import FeatureUnion, Pipeline
 
+# TODO: Maybe remove this and use SimpleImputer?
+from utils.missing_values_filler import MissingValuesFiller
+mvf = MissingValuesFiller()
+
 ACCOUNT_AGE_SINCE_DATE = dt.datetime(2021, 1, 1) # Jan 1st, 2021 is the date we measure account "age" from
 DEFAULT_NUM_LANGUAGES_TO_FEATUREIZE = 9
 
-#Custom Transformer that extracts columns passed as argument to its constructor
-class FeatureSelector( BaseEstimator, TransformerMixin ):
-    def __init__( self, feature_names ):
-        self._feature_names = feature_names
+# TODO Hardcoded outliers limits (Based on manuel data analysis for the moment)
+mum_profile_likes_upper_limit = 200000
+num_followers_lower_limit = 0
+num_followers_upper_limit = 45000000
+num_people_following_lower_limit = 0
+num_people_following_upper_limit = 550000
+num_status_updates_lower_limit = 0
+num_status_updates_upper_limit = 1500000
+num_direct_messages_lower_limit = 0
+num_direct_messages_upper_limit=75000
+avg_daily_profile_clicks_lower_limit = 0
+avg_daily_profile_clicks_upper_limit = 17
 
-    def fit( self, X, y = None ):
-        return self
-
-    def transform( self, X, y = None ):
-        return X[ self._feature_names ]
 
 
 #Custom Transformer that modifies colour columns
@@ -45,7 +52,7 @@ class ColorsTransformer( BaseEstimator, TransformerMixin ):
         for column_name in self._feature_names:
             self.split_colour_column(column_name)
             X.drop(column_name, axis=1, inplace=True)
-        return X
+        return X.values
 
 #Languages Transformer that modifies colour columns
 class LanguagesTransformer( BaseEstimator, TransformerMixin ):
@@ -68,7 +75,7 @@ class LanguagesTransformer( BaseEstimator, TransformerMixin ):
         one_hot_top_n_languages = pd.get_dummies(X[self._feature_names], prefix='Language')
         X.drop(self._feature_names, axis=1, inplace=True)
         X = X.join(one_hot_top_n_languages)
-        return X
+        return X.values
 
 #Custom Transformer that modifies location columns
 class LocationsTransformer( BaseEstimator, TransformerMixin ):
@@ -109,7 +116,7 @@ class LocationsTransformer( BaseEstimator, TransformerMixin ):
         # This column uses "Enabled" and "Disabled" (and "??") rather than "True" and "False"
         X['Location Public Visibility'] = X['Location Public Visibility'].apply(lambda strVal: str(strVal).lower() == 'enabled' ).astype(bool).astype(int)
 
-        return X
+        return X.values
 
 #Custom Transformer that modifies textual columns
 class TextTransformer( BaseEstimator, TransformerMixin ):
@@ -124,7 +131,7 @@ class TextTransformer( BaseEstimator, TransformerMixin ):
             X['Has '+feature_name] = X[feature_name].apply(lambda urlVal: 1 if str(urlVal) else 0 )
             X['Has '+feature_name].fillna(0, inplace=True)
             X.drop(feature_name, axis=1, inplace=True)
-        return X
+        return X.values
 
 #Custom Transformer that modifies our date time columns
 class DateTimeTransformer( BaseEstimator, TransformerMixin ):
@@ -155,7 +162,7 @@ class DateTimeTransformer( BaseEstimator, TransformerMixin ):
 
         X['Account Age Days'] = X['Profile Creation Timestamp'].apply(lambda x: days_since_fixed_date(x) )
         X.drop('Profile Creation Timestamp', axis=1, inplace=True)
-        return X
+        return X.values
 
 #Custom Transformer that modifies our categorical columns
 class CategoricalTransformer( BaseEstimator, TransformerMixin ):
@@ -163,21 +170,59 @@ class CategoricalTransformer( BaseEstimator, TransformerMixin ):
         self._feature_names = feature_names
 
     def fit( self, X, y = None ):
+        # On Fit, we also want to try to impute values of Profile Category based on Num of Status Updates
+        X['Profile Category'] = X['Profile Category'].replace(r'^\s*$', 'unknown', regex=True)
+        X = mvf.fill_missing_values(X, 'Profile Category', 'unknown', 'Num of Status Updates', 1)
         return self
 
     def transform( self, X, y = None ):
-        return X
+        X['Is Profile View Size Customized?'].fillna(False, inplace=True)
+        X['Is Profile View Size Customized?'] = X['Is Profile View Size Customized?'].astype(bool)
+
+        X['Profile Cover Image Status'].fillna('Not set', inplace=True)
+        X['Profile Cover Image Status'] = X['Profile Cover Image Status'].apply(lambda strVal: (str(strVal).lower() == 'set') )
+
+        X['Profile Verification Status'] = X['Profile Verification Status'].apply(lambda strVal: str(strVal).lower() )
+
+        X['Profile Category'] = X['Profile Category'].replace(r'^\s*$', 'unknown', regex=True)
+
+        return X.values
 
 #Custom Transformer that modifies our numerical columns
 class NumericalTransformer( BaseEstimator, TransformerMixin ):
     def __init__( self, feature_names ):
         self._feature_names = feature_names
 
+    def handle_outliers(self, df, col_name, lower_limit, upper_limit, remove=False):
+        # Remove
+        if remove:
+            outliers = df[((df[col_name] > upper_limit) | (df[col_name] < lower_limit))]
+            print('Droped {:} outilers. Based on column {:}'.format(len(outliers), col_name))
+            df = df.drop(outliers.index)
+        # Clip ?
+        else:
+            df[col_name] = df[col_name].clip(lower_limit, upper_limit)
+
+        return df
+
     def fit( self, X, y = None ):
+        X = self.handle_outliers( X, 'Avg Daily Profile Clicks', avg_daily_profile_clicks_lower_limit, avg_daily_profile_clicks_upper_limit )
+        X = self.handle_outliers( X, 'Num of Status Updates',    num_status_updates_lower_limit,       num_status_updates_upper_limit )
+        X = self.handle_outliers( X, 'Num of Followers',         num_followers_lower_limit,            num_followers_upper_limit )
+        X = self.handle_outliers( X, 'Num of People Following',  num_people_following_lower_limit,     num_people_following_upper_limit )
+        X = self.handle_outliers( X, 'Num of Direct Messages',   num_direct_messages_lower_limit,      num_direct_messages_upper_limit )
         return self
 
     def transform( self, X, y = None ):
-        return X
+        # Don't need to do anything, since the SimpleImputer will handle imputation of missing values
+        X['Avg Daily Profile Visit Duration in seconds'] = X['Avg Daily Profile Visit Duration in seconds']
+        X['Avg Daily Profile Clicks'] = X['Avg Daily Profile Clicks']
+        X['Num of Status Updates']    = X['Num of Status Updates']
+        X['Num of Followers']         = X['Num of Followers']
+        X['Num of People Following']  = X['Num of People Following']
+        X['Num of Direct Messages']   = X['Num of Direct Messages']
+
+        return X.values
 
 
 #Color features
