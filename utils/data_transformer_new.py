@@ -52,7 +52,7 @@ class ColorsTransformer( BaseEstimator, TransformerMixin ):
         for column_name in self._feature_names:
             self.split_colour_column(column_name)
             X.drop(column_name, axis=1, inplace=True)
-        return X.values
+        return X[ self._feature_names ].values
 
 #Languages Transformer that modifies colour columns
 class LanguagesTransformer( BaseEstimator, TransformerMixin ):
@@ -113,7 +113,7 @@ class LocationsTransformer( BaseEstimator, TransformerMixin ):
         # This column uses "Enabled" and "Disabled" (and "??") rather than "True" and "False"
         X['Location Public Visibility'] = X['Location Public Visibility'].apply(lambda strVal: str(strVal).lower() == 'enabled' ).astype(bool).astype(int)
 
-        return X.values
+        return X[ self._feature_names ].values
 
 #Custom Transformer that modifies textual columns
 class TextTransformer( BaseEstimator, TransformerMixin ):
@@ -128,7 +128,7 @@ class TextTransformer( BaseEstimator, TransformerMixin ):
             X['Has '+feature_name] = X[feature_name].apply(lambda urlVal: 1 if str(urlVal) else 0 )
             X['Has '+feature_name].fillna(0, inplace=True)
             X.drop(feature_name, axis=1, inplace=True)
-        return X.values
+        return X[ self._feature_names ].values
 
 #Custom Transformer that modifies our date time columns
 class DateTimeTransformer( BaseEstimator, TransformerMixin ):
@@ -159,7 +159,7 @@ class DateTimeTransformer( BaseEstimator, TransformerMixin ):
 
         X['Account Age Days'] = X['Profile Creation Timestamp'].apply(lambda x: days_since_fixed_date(x) )
         X.drop('Profile Creation Timestamp', axis=1, inplace=True)
-        return X.values
+        return X[ self._feature_names ].values
 
 #Custom Transformer that modifies our categorical columns
 class CategoricalTransformer( BaseEstimator, TransformerMixin ):
@@ -183,7 +183,7 @@ class CategoricalTransformer( BaseEstimator, TransformerMixin ):
 
         X['Profile Category'] = X['Profile Category'].replace(r'^\s*$', 'unknown', regex=True)
 
-        return X.values
+        return X[ self._feature_names ].values
 
 #Custom Transformer that modifies our numerical columns
 class NumericalTransformer( BaseEstimator, TransformerMixin ):
@@ -219,7 +219,7 @@ class NumericalTransformer( BaseEstimator, TransformerMixin ):
         X['Num of People Following']  = X['Num of People Following']
         X['Num of Direct Messages']   = X['Num of Direct Messages']
 
-        return X.values
+        return X[ self._feature_names ].values
 
 
 #Color features
