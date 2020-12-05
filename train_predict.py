@@ -163,38 +163,46 @@ def main():
 
     # -- Prepare pipeline --
 
-    # GBR With best searched hyper parms
-    # print('GradientBoostingRegressor')
+    # Pipeline with best searched hyper parms
+    print('Buiding and evaluating pipeline with models')
     # RandSearchCV params
-    #{'regressor__gradientboostingregressor__max_depth': 4,
-    # 'regressor__gradientboostingregressor__n_estimators': 100,
-    # 'regressor__gradientboostingregressor__max_features': 'auto',
-    # 'regressor__gradientboostingregressor__min_samples_leaf': 20,
-    # 'regressor__gradientboostingregressor__min_samples_split': 16}
-    # # RandSearchCV Score -1.722821758493802
-    gbr = GradientBoostingRegressor(n_estimators=100,
-                                max_features='sqrt',
-                                max_depth=5,
-                                min_samples_split=2,
-                                min_samples_leaf=7,
-                                random_state=42)
+    #'regressor__votingregressor__BaggingGBR__base_estimator__n_estimators': 200
+    #'regressor__votingregressor__BaggingGBR__base_estimator__max_features': 'sqrt',
+    #'regressor__votingregressor__BaggingGBR__base_estimator__max_depth': 8,
+    #'regressor__votingregressor__BaggingGBR__base_estimator__min_samples_split': 8,
+    #'regressor__votingregressor__BaggingGBR__base_estimator__min_samples_leaf': 8,
+    #'regressor__votingregressor__XGB__base_estimator__colsample_bytree': 0.8,
+    #'regressor__votingregressor__XGB__base_estimator__eta': 0.15,
+    #'regressor__votingregressor__XGB__base_estimator__subsample': 1.0,
+    #'regressor__votingregressor__XGB__base_estimator__min_child_weight': 3,
+    #'regressor__votingregressor__XGB__base_estimator__max_depth': 5,
+    # GBR
+    gbr = GradientBoostingRegressor(n_estimators=200,
+                                    max_features='sqrt',
+                                    max_depth=8,
+                                    min_samples_split=8,
+                                    min_samples_leaf=8,
+                                    random_state=42)
     bagging_gbr = BaggingRegressor(base_estimator=gbr, random_state=42)
 
     # xgboost
     xgb_model = xgb.XGBRegressor(objective="reg:squaredlogerror",
-                                 eval_metric='rmsle',
-                                 max_depth=10,
-                                 eta=0.1,
-                                 random_state=42)
+                                eval_metric='rmsle',
+                                colsample_bytree = 0.8,
+                                eta = 0.15,
+                                max_depth = 5,
+                                min_child_weight = 3,
+                                subsample = 1.0,
+                                random_state=42)
     bagging_xgb = BaggingRegressor(base_estimator=xgb_model, random_state=42)
 
 
     #Voting regressor
-    voting_regressor = VotingRegressor([('BaggingGBR', bagging_gbr), ('XGB', bagging_xgb)], verbose=1, n_jobs=-1)
+    voting_regressor = VotingRegressor([('BaggingGBR', bagging_gbr), ('XGB', bagging_xgb)], n_jobs=-1)
 
     # -- Pipeline (Has scaling, power_transform and regressor inside) --
     pipe = create_pipeline(use_scaling=True,
-                           regressor=voting_regressor)
+                        regressor=voting_regressor)
 
     # -- KFold CV using scorer based on rmsle --
     scorer = make_scorer(rmsle, greater_is_better=False)
@@ -245,9 +253,11 @@ def main():
         print('Test shape {:}'.format(test_X.shape))
 
         # -- Fit pipe (Transofrmation and model) on all Train data set --
+        print('Fitting on all data')
         pipe.fit(data_X, data_y)
 
         # -- Predict on Test set --
+        print('Predicting on test')
         test_pred_y = pipe.predict(test_X)
 
         # Store test set predictions in DataFrame and save to file
@@ -264,11 +274,11 @@ def main():
         # done to the data and any other relevent information. Don't forget
         # to add the prediction file itself to the subfolder submissions\pred_files.
         # Also, name the prediction file based on the model, date, git version...
-        test_tosubmit_folder = os.path.join(log_folder,'v13-GBReg-OutliersClipped-ImputersimilarV7-NoUtcNoLocation')
+        test_tosubmit_folder = os.path.join(log_folder,'v15-DataTransformLikeV7-VotingGBRXgb-HyperParams')
         # Create log folder if does not exist
         if not Path(test_tosubmit_folder).exists():
             os.mkdir(test_tosubmit_folder)
-        test_name = 'GBReg-OutliersClipped-ImputersimilarV7-NoUtcNoLocation-RandState42-CoxBoxY-gitversion-xxxx-2020-12-04'
+        test_name = 'v15-DataTransformLikeV7-VotingGBRXgb-HyperParams-RandState42-CoxBoxY-gitversion-xxxx-2020-12-05'
         prediction_file_save_path = os.path.join(test_tosubmit_folder, test_name+'.csv')
         print('\nSaving prediction to "{:}"'.format(prediction_file_save_path))
         test_pd.to_csv(prediction_file_save_path, sep=',', index=False)
