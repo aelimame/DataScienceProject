@@ -43,8 +43,8 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
 
         # TODO Hard coded for now. Remove outiliers using IQR or other techniques
         # TODO lower limit? ==0?
-        #if 'Num of Profile Likes' in self.df:
-            #self.df = self.df[self.df['Num of Profile Likes'] < mum_profile_likes_upper_limit]
+        if 'Num of Profile Likes' in self.df:
+            self.df = self.df[self.df['Num of Profile Likes'] < mum_profile_likes_upper_limit]
             #self.df['Num of Profile Likes'] = self.df['Num of Profile Likes'].clip(upper=80000)
             #self.df[self.df['Num of Profile Likes']['Num of Profile Likes'] < 5] = 5
             #return self.df
@@ -70,6 +70,7 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
         # More cleaning?
         return self.df
 
+    # Handle outliers, defaut it clips values (remove = False) 
     def handle_outliers(self, df, col_name, lower_limit, upper_limit, remove=False):
         # Remove
         if remove:
@@ -77,8 +78,8 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
             print('Droped {:} outilers. Based on column {:}'.format(len(outliers), col_name))
             df = df.drop(outliers.index)
         # Clip ?
-        else:
-            df[col_name] = df[col_name].clip(lower_limit, upper_limit)
+        #else:
+        #    df[col_name] = df[col_name].clip(lower_limit, upper_limit)
 
         return df
 
