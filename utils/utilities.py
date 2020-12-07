@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_log_error
 import numpy as np
 
-
 # TODO VERIFY RMSLE metric
 def rmsle(y_true, y_pred, sample_weight=None):
     return np.sqrt(mean_squared_log_error(y_true, y_pred, sample_weight))
@@ -34,37 +33,39 @@ def load_x_y_from_loaders(images_loader,
     if profiles_ids_list is None:
         profiles_ids_list = text_data_loader.get_orig_features()['Id'].values
 
-    features = text_data_loader.get_orig_features()
+    orig_features = text_data_loader.get_orig_features()
+    orig_features = orig_features[orig_features['Id'].isin(profiles_ids_list)]
+    #orig_features = orig_features.drop(columns =['Id'])
+
+    # TODO outliers removal, should be done outside of the DataTransormer since sklearn
+    # does not allow dropping X values (Y and X won't match!)
+    # Do it here?
+    if 'Num of Profile Likes' in orig_features:
+       orig_features = orig_features[orig_features['Num of Profile Likes'] < 200000]
 
     # Fit/Transform data
     if data_transformer is not None:
         if transform_only:
-            features = data_transformer.transform(features)
+            transf_features = data_transformer.transform(orig_features)
         else:
-            features = data_transformer.fit_transform(features)
+            data_transformer.fit(orig_features)
+            transf_features = data_transformer.transform(orig_features)
 
-    features = features[features['Id'].isin(profiles_ids_list)]
-    if 'Num of Profile Likes' in features:
-        likes = features['Num of Profile Likes']
+    # Extract Y
+    if 'Num of Profile Likes' in orig_features:
+        likes = orig_features['Num of Profile Likes']
         likes = np.array(likes)
-        features = features.drop(columns =['Num of Profile Likes'])
-
-    # Update profiles ids list (Some may have been droped)
-    profiles_ids_list = features['Id'].values
-
-    features = features.drop(columns =['Id'])
-    features = np.array(features)
 
     # Construct dictionaries
     if include_images:
         images = np.array([images_loader.get_image_data_for_profile_id(profile_id) for profile_id in profiles_ids_list])
-        X = {image_input_name: images,
-             text_features_input_name: features} # Transformed Text Features
+        X = {image_input_name: images, # Images Features
+             text_features_input_name: transf_features} # Transformed Text Features
     else:
-        X = {text_features_input_name: features} # Transformed Text Features
+        X = {text_features_input_name: transf_features} # Transformed Text Features
     
     if likes is not None:
-        y = {output_name: likes}
+        y = {output_name: likes} # Y
         return X, y
     
     return X

@@ -15,6 +15,8 @@ from operator import itemgetter
 
 import xgboost as xgb
 
+#import lightgbm as lgb
+
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import KFold, RepeatedKFold
 from sklearn.model_selection import cross_val_score
@@ -31,7 +33,7 @@ from sklearn.pipeline import Pipeline, make_pipeline
 # Project imports
 from utils.images_loader import ImagesLoader
 from utils.text_data_loader import TextDataLoader
-from utils.data_transformer import HAL9001DataTransformer
+from utils.data_transformer_new import HAL9001DataTransformer
 from utils.utilities import plot_history
 from utils.utilities import rmsle
 from utils.utilities import load_x_y_from_loaders
@@ -44,7 +46,8 @@ TEXT_FEATURES_INPUT_NAME = 'text_features'
 OUTPUT_NAME = 'likes'
 
 # params
-use_scaling = True
+use_scaling_for_X = True
+use_scaling_for_y = True
 include_images = False
 random_seed = 42
 
@@ -89,24 +92,29 @@ class CustomTargetTransformer(BaseEstimator, TransformerMixin):
 
 # Create a custom pipline that get a Regressor as parmeter and return a pipline
 # TODO include Dataloaders and HAL9001DataTansformer inside!
-def create_pipeline(use_scaling=True,
+def create_pipeline(use_scaling_for_x=True,
+                    use_scaling_for_y=True,
                     regressor=GradientBoostingRegressor()):
     # X pipeline
 
     # using scaling
-    if use_scaling:
+    if use_scaling_for_x:
         # TODO: Try other scalers/Transformers...
 #        x_scaler = StandardScaler()
+#        x_scaler = MinMaxScaler()
 #        x_scaler = QuantileTransformer(n_quantiles=9, output_distribution='normal')
-        x_scaler = RobustScaler()
-        pipe_X = make_pipeline((x_scaler),
-                               (regressor))
+#        x_scaler = RobustScaler()
+#        pipe_X = make_pipeline((x_scaler),
+#                               (regressor))
+
+        pipe_X = make_pipeline(regressor)
+
     else:
         # X pipline with regressor only
         pipe_X = make_pipeline(regressor)
 
     # y Transformer
-    if use_scaling:
+    if use_scaling_for_y:
         model = TransformedTargetRegressor(regressor=pipe_X,
                                            transformer=CustomTargetTransformer(),
                                            check_inverse=False) # TODO DEBUG For the moment
@@ -165,22 +173,73 @@ def main():
 
     # Pipeline with best searched hyper parms
     print('Buiding and evaluating pipeline with models')
-    # BGR like V7
-    gbrv7 = GradientBoostingRegressor(n_estimators=100,
-                                max_features='sqrt',
-                                max_depth=5,
-                                min_samples_split=2,
-                                min_samples_leaf=7,
+    # RandSearchCV params
+    #'regressor__votingregressor__BagGbr__base_estimator__n_estimators': 200
+    #'regressor__votingregressor__BagGbr__base_estimator__max_features': 'sqrt',
+    #'regressor__votingregressor__BagGbr__base_estimator__max_depth': 8,
+    #'regressor__votingregressor__BagGbr__base_estimator__min_samples_split': 8,
+    #'regressor__votingregressor__BagGbr__base_estimator__min_samples_leaf': 8,
+    #'regressor__votingregressor__BagXbg__base_estimator__colsample_bytree': 0.8,
+    #'regressor__votingregressor__BagXbg__base_estimator__eta': 0.15,
+    #'regressor__votingregressor__BagXbg__base_estimator__subsample': 1.0,
+    #'regressor__votingregressor__BagXbg__base_estimator__min_child_weight': 3,
+    #'regressor__votingregressor__BagXbg__base_estimator__max_depth': 5,
+    # GBR
+    gbr_model = GradientBoostingRegressor(n_estimators=200,
+                                    max_features='sqrt',
+                                    max_depth=8,
+                                    min_samples_split=8,
+                                    min_samples_leaf=8,
+                                    random_state=42)
+    bagging_gbr = BaggingRegressor(base_estimator=gbr_model, random_state=42)
+
+    # xgboost
+    xgb_model = xgb.XGBRegressor(objective="reg:squaredlogerror",
+                                eval_metric='rmsle',
+                                n_estimators=100,
+                                colsample_bytree = 0.8,
+                                eta = 0.15,
+                                max_depth = 5,
+                                min_child_weight = 3,
+                                subsample = 1.0,
                                 random_state=42)
+    bagging_xgb = BaggingRegressor(base_estimator=xgb_model, random_state=42)
+
+    # Random forest
+#    rand_forest = RandomForestRegressor(bootstrap=True,
+#                                   #max_depth=80,
+#                                   max_features='auto',
+#                                   min_samples_leaf=4,
+#                                   min_samples_split=2,
+#                                   n_estimators=200,
+#                                   random_state=42,
+#                                   verbose=1)
+#    bagging_rand_forest = BaggingRegressor(base_estimator=rand_forest, random_state=42)
+
+    # Lightgbm
+#    gbm = lgb.LGBMRegressor(n_estimators=200,
+#                            num_leaves=20,
+#                            learning_rate=0.05,
+#                            #max_depth = 
+#                            random_state=42)
+#    bagging_gbm = BaggingRegressor(base_estimator=gbm, random_state=42)
+
+    #Voting regressor
+    voting_regressor = VotingRegressor([('BagGbr', bagging_gbr),
+                                        ('BagXbg', bagging_xgb)],
+                                        #('BagGbm', bagging_gbm)],
+                                        #('BagRanFrst', bagging_rand_forest)],
+                                        n_jobs=-1)
 
     # -- Pipeline (Has scaling, power_transform and regressor inside) --
-    pipe = create_pipeline(use_scaling=True,
-                        regressor=gbrv7)#rand_forest)#voting_regressor)
+    pipe = create_pipeline(use_scaling_for_x=True,
+                           use_scaling_for_y=True,
+                           regressor=voting_regressor)
 
     # -- KFold CV using scorer based on rmsle --
     scorer = make_scorer(rmsle, greater_is_better=False)
-    kfoldcv = KFold(n_splits=10, random_state=random_seed, shuffle=True)
-    rep_kfoldcv = RepeatedKFold(n_splits=10, n_repeats=3, random_state=random_seed)
+    kfoldcv = KFold(n_splits=5, random_state=random_seed, shuffle=True)
+    rep_kfoldcv = RepeatedKFold(n_splits=5, n_repeats=3, random_state=random_seed)
 
     scores = cross_val_score(pipe,
                              data_X,
@@ -204,7 +263,6 @@ def main():
 
 
 
-
     # -- Predict on Test set ---
     if predict_on_test:
         print('\n\nPredicting on Test data')
@@ -214,7 +272,7 @@ def main():
         test_X = load_x_y_from_loaders(images_loader=test_images_loader,
                                     text_data_loader=test_text_data_loader,
                                     data_transformer=data_transformer,
-                                    transform_only=False, # TODO Transform only (Not implemented yet, use fit_transform)
+                                    transform_only=True, # Transform only
                                     image_input_name=IMAGE_INPUT_NAME,
                                     text_features_input_name=TEXT_FEATURES_INPUT_NAME,
                                     output_name=OUTPUT_NAME,
@@ -247,11 +305,11 @@ def main():
         # done to the data and any other relevent information. Don't forget
         # to add the prediction file itself to the subfolder submissions\pred_files.
         # Also, name the prediction file based on the model, date, git version...
-        test_tosubmit_folder = os.path.join(log_folder,'v16-DataTransformLikeV7-GBRV7-HyperParams')
+        test_tosubmit_folder = os.path.join(log_folder,'Vxx-VotingBaggGbrXgBoost-NewDataTransf')
         # Create log folder if does not exist
         if not Path(test_tosubmit_folder).exists():
             os.mkdir(test_tosubmit_folder)
-        test_name = 'v16-GBRV7-RobustScaler-HyperParams-DataTransformLikeV7-RandState42-CoxBoxY-gitversion-xxxx-2020-12-05'
+        test_name = 'Vxx-VotingBaggGbrXgBoost-NewDataTransf-RandState42-CoxBoxY-gitversion-xxxx-2020-12-05'
         prediction_file_save_path = os.path.join(test_tosubmit_folder, test_name+'.csv')
         print('\nSaving prediction to "{:}"'.format(prediction_file_save_path))
         test_pd.to_csv(prediction_file_save_path, sep=',', index=False)

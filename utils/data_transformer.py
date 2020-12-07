@@ -25,7 +25,7 @@ avg_daily_profile_clicks_lower_limit = 0
 avg_daily_profile_clicks_upper_limit = 17
 
 
-COLUMNS_TO_DROP = ['User Name', 'Profile Image', 'User Time Zone']
+COLUMNS_TO_DROP = ['User Name', 'Profile Image', 'Id', 'Num of Profile Likes', 'User Time Zone']
 COLOUR_COLUMNS = ['Profile Text Color', 'Profile Page Color', 'Profile Theme Color']
 BOOLEAN_COLUMNS = ['Is Profile View Size Customized?', 'Location Public Visibility']
 
@@ -53,11 +53,13 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
 
     # TODO make it work like fit_transform and transform of sklearn transformers...
     def fit(self, input_df):
-        return NotImplementedError
+        pass
+        #return NotImplementedError
 
     # TODO make it work like fit_transform and transform of sklearn transformers...
     def transform(self, input_df):
-        return NotImplementedError
+        return self.fit_transform(input_df)
+        #return NotImplementedError
 
 
     def run_all(self):
@@ -113,7 +115,6 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
 
         # Using a random number between -8 UTC and + 10 UTC because that encompases most of the
         # land mass of the Earth.
-#        self.df['UTC Offset'] = self.df['UTC Offset'].fillna( np.random.randint( -8, 11 )*60*60 )
 #        self.df['UTC Offset'] = self.df['UTC Offset'].fillna(UTC_FOR_NA)
 
         # floor so we group 1/2 hour offsets
@@ -160,7 +161,7 @@ class HAL9001DataTransformer: # TODO Inherit from BaseEstimator and TransformerM
 
     def engineer_location(self):
         # For now, just set a flag if the location is empty
-#        self.df['Has Location'] = self.df['Location'].apply(lambda location: False if pd.isnull(location) else True )
+        self.df['Has Location'] = self.df['Location'].apply(lambda location: False if pd.isnull(location) else True )
         # TODO: Use geocoding results to add more info?
         self.df.drop('Location', axis=1, inplace=True)
         return self.df
