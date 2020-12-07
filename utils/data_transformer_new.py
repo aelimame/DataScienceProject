@@ -406,6 +406,7 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
                                                 #('imputer', IterativeImputer(initial_strategy = 'median'))#,
                                                 ('imputer', SimpleImputer(strategy = 'median')),
                                                 ('num_scaler', RobustScaler())
+                                                #('num_scaler', PowerTransformer(method='box-cox', standardize=True))
                                               ])
 
         # Combining numerical and categorical piepline into one full big pipeline horizontally

@@ -52,7 +52,7 @@ include_images = False
 random_seed = 42
 
 # Change this generate a prediction on test
-predict_on_test = False
+predict_on_test = True
 
 # data paths
 train_text_path = r'./src_data/train.csv'
@@ -158,34 +158,35 @@ def main():
     # Pipeline with best searched hyper parms
     print('Buiding and evaluating pipeline with models')
     # RandSearchCV params
-    #'regressor__votingregressor__BagGbr__base_estimator__n_estimators': 200
-    #'regressor__votingregressor__BagGbr__base_estimator__max_features': 'sqrt',
     #'regressor__votingregressor__BagGbr__base_estimator__max_depth': 8,
-    #'regressor__votingregressor__BagGbr__base_estimator__min_samples_split': 8,
-    #'regressor__votingregressor__BagGbr__base_estimator__min_samples_leaf': 8,
-    #'regressor__votingregressor__BagXbg__base_estimator__colsample_bytree': 0.8,
-    #'regressor__votingregressor__BagXbg__base_estimator__eta': 0.15,
-    #'regressor__votingregressor__BagXbg__base_estimator__subsample': 1.0,
-    #'regressor__votingregressor__BagXbg__base_estimator__min_child_weight': 3,
-    #'regressor__votingregressor__BagXbg__base_estimator__max_depth': 5,
+    #'regressor__votingregressor__BagGbr__base_estimator__max_features': 'sqrt',
+    #'regressor__votingregressor__BagGbr__base_estimator__min_samples_leaf': 6,
+    #'regressor__votingregressor__BagGbr__base_estimator__min_samples_split': 3,
+    #'regressor__votingregressor__BagGbr__base_estimator__n_estimators': 200
+    #'regressor__votingregressor__BagXgb__base_estimator__min_child_weight': 1,
+    #'regressor__votingregressor__BagXgb__base_estimator__eta': 0.08,
+    #'regressor__votingregressor__BagXgb__base_estimator__max_depth': 6,
+    #'regressor__votingregressor__BagXgb__base_estimator__colsample_bytree': 0.6,
+    #'regressor__votingregressor__BagXgb__base_estimator__n_estimators': 200,
+    #'regressor__votingregressor__BagXgb__base_estimator__subsample': 0.8,
     # GBR
     gbr_model = GradientBoostingRegressor(n_estimators=200,
                                     max_features='sqrt',
                                     max_depth=8,
-                                    min_samples_split=8,
-                                    min_samples_leaf=8,
+                                    min_samples_split=3,
+                                    min_samples_leaf=6,
                                     random_state=42)
     bagging_gbr = BaggingRegressor(base_estimator=gbr_model, random_state=42)
 
     # xgboost
     xgb_model = xgb.XGBRegressor(objective="reg:squaredlogerror",
                                 eval_metric='rmsle',
-                                n_estimators=100,
-                                colsample_bytree = 0.8,
-                                eta = 0.15,
-                                max_depth = 5,
-                                min_child_weight = 3,
-                                subsample = 1.0,
+                                n_estimators=200,
+                                colsample_bytree = 0.6,
+                                eta = 0.08,
+                                max_depth = 6,
+                                min_child_weight = 1,
+                                subsample = 0.8,
                                 random_state=42)
     bagging_xgb = BaggingRegressor(base_estimator=xgb_model, random_state=42)
 
@@ -210,8 +211,8 @@ def main():
 
     #Voting regressor
     voting_regressor = VotingRegressor([('BagGbr', bagging_gbr),
-                                        ('BagXbg', bagging_xgb)],
-                                        #('BagGbm', bagging_gbm)],
+                                        ('BagXgb', bagging_xgb)],
+                                        ('BagGbm', bagging_gbm)],
                                         #('BagRanFrst', bagging_rand_forest)],
                                         n_jobs=-1)
 
@@ -287,11 +288,11 @@ def main():
         # done to the data and any other relevent information. Don't forget
         # to add the prediction file itself to the subfolder submissions\pred_files.
         # Also, name the prediction file based on the model, date, git version...
-        test_tosubmit_folder = os.path.join(log_folder,'V17-VotingBaggGbrXgBoost-NewDataTransf-MoreFeature')
+        test_tosubmit_folder = os.path.join(log_folder,'V18-VotBagGbrXgBst-HypParm-NewDTransf-MoreFeat')
         # Create log folder if does not exist
         if not Path(test_tosubmit_folder).exists():
             os.mkdir(test_tosubmit_folder)
-        test_name = 'V17-VotingBaggGbrXgBoost-NewDataTransf-MoreFeature-RandState42-CoxBoxY-gitversion-xxxx-2020-12-06'
+        test_name = 'V18-VotBagGbrXgBst-HypParm-NewDTransf-MoreFeat-RandState42-CoxBoxY-gitvers-xxxx-2020-12-07'
         prediction_file_save_path = os.path.join(test_tosubmit_folder, test_name+'.csv')
         print('\nSaving prediction to "{:}"'.format(prediction_file_save_path))
         test_pd.to_csv(prediction_file_save_path, sep=',', index=False)
