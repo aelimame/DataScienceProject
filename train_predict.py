@@ -52,7 +52,7 @@ include_images = False
 random_seed = 42
 
 # Change this generate a prediction on test
-predict_on_test = True
+predict_on_test = False
 
 # data paths
 train_text_path = r'./src_data/train.csv'
@@ -91,27 +91,13 @@ class CustomTargetTransformer(BaseEstimator, TransformerMixin):
 
 
 # Create a custom pipline that get a Regressor as parmeter and return a pipline
-# TODO include Dataloaders and HAL9001DataTansformer inside!
-def create_pipeline(use_scaling_for_x=True,
-                    use_scaling_for_y=True,
+# HAL9001DataTansformer is now inside!
+def create_pipeline(use_scaling_for_y=True,
+                    data_transformer=HAL9001DataTransformer(),
                     regressor=GradientBoostingRegressor()):
     # X pipeline
-
-    # using scaling
-    if use_scaling_for_x:
-        # TODO: Try other scalers/Transformers...
-#        x_scaler = StandardScaler()
-#        x_scaler = MinMaxScaler()
-#        x_scaler = QuantileTransformer(n_quantiles=9, output_distribution='normal')
-#        x_scaler = RobustScaler()
-#        pipe_X = make_pipeline((x_scaler),
-#                               (regressor))
-
-        pipe_X = make_pipeline(regressor)
-
-    else:
-        # X pipline with regressor only
-        pipe_X = make_pipeline(regressor)
+    pipe_X = make_pipeline((data_transformer),
+                           (regressor))
 
     # y Transformer
     if use_scaling_for_y:
@@ -156,8 +142,6 @@ def main():
     print('\n\nEvaluating on Train data using k-fold-CV')
     data_X, data_y = load_x_y_from_loaders(images_loader=images_loader,
                                         text_data_loader=text_data_loader,
-                                        data_transformer=data_transformer,
-                                        transform_only=False, # TODO Fit and Transform
                                         image_input_name=IMAGE_INPUT_NAME,
                                         text_features_input_name=TEXT_FEATURES_INPUT_NAME,
                                         output_name=OUTPUT_NAME,
@@ -232,8 +216,8 @@ def main():
                                         n_jobs=-1)
 
     # -- Pipeline (Has scaling, power_transform and regressor inside) --
-    pipe = create_pipeline(use_scaling_for_x=True,
-                           use_scaling_for_y=True,
+    pipe = create_pipeline(use_scaling_for_y=True,
+                           data_transformer=data_transformer,
                            regressor=voting_regressor)
 
     # -- KFold CV using scorer based on rmsle --
@@ -271,8 +255,6 @@ def main():
         test_profiles_ids_list = test_text_data_loader.get_orig_features()['Id'].values
         test_X = load_x_y_from_loaders(images_loader=test_images_loader,
                                     text_data_loader=test_text_data_loader,
-                                    data_transformer=data_transformer,
-                                    transform_only=True, # Transform only
                                     image_input_name=IMAGE_INPUT_NAME,
                                     text_features_input_name=TEXT_FEATURES_INPUT_NAME,
                                     output_name=OUTPUT_NAME,
@@ -305,11 +287,11 @@ def main():
         # done to the data and any other relevent information. Don't forget
         # to add the prediction file itself to the subfolder submissions\pred_files.
         # Also, name the prediction file based on the model, date, git version...
-        test_tosubmit_folder = os.path.join(log_folder,'Vxx-VotingBaggGbrXgBoost-NewDataTransf')
+        test_tosubmit_folder = os.path.join(log_folder,'V16-VotingBaggGbrXgBoost-NewDataTransf-MoreFeature')
         # Create log folder if does not exist
         if not Path(test_tosubmit_folder).exists():
             os.mkdir(test_tosubmit_folder)
-        test_name = 'Vxx-VotingBaggGbrXgBoost-NewDataTransf-RandState42-CoxBoxY-gitversion-xxxx-2020-12-05'
+        test_name = 'V16-VotingBaggGbrXgBoost-NewDataTransf-MoreFeature-RandState42-CoxBoxY-gitversion-xxxx-2020-12-05'
         prediction_file_save_path = os.path.join(test_tosubmit_folder, test_name+'.csv')
         print('\nSaving prediction to "{:}"'.format(prediction_file_save_path))
         test_pd.to_csv(prediction_file_save_path, sep=',', index=False)

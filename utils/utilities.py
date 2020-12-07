@@ -13,16 +13,11 @@ def rmsle_debug(y_true, y_pred, sample_weight=None):
 
 
 # Method to help load X and y from data loaders
-# Params: 
-#  data_transformer=None, # Will be used (if provided) to fit / transform data
-#  transform_only=False, # Transform only if true, fit and transform otherwise
 def load_x_y_from_loaders(images_loader,
                           text_data_loader,
                           image_input_name,
                           text_features_input_name,
                           output_name,
-                          data_transformer=None,
-                          transform_only=False,
                           profiles_ids_list=None,
                           include_images=False):
 
@@ -43,14 +38,6 @@ def load_x_y_from_loaders(images_loader,
     if 'Num of Profile Likes' in orig_features:
        orig_features = orig_features[orig_features['Num of Profile Likes'] < 200000]
 
-    # Fit/Transform data
-    if data_transformer is not None:
-        if transform_only:
-            transf_features = data_transformer.transform(orig_features)
-        else:
-            data_transformer.fit(orig_features)
-            transf_features = data_transformer.transform(orig_features)
-
     # Extract Y
     if 'Num of Profile Likes' in orig_features:
         likes = orig_features['Num of Profile Likes']
@@ -60,9 +47,9 @@ def load_x_y_from_loaders(images_loader,
     if include_images:
         images = np.array([images_loader.get_image_data_for_profile_id(profile_id) for profile_id in profiles_ids_list])
         X = {image_input_name: images, # Images Features
-             text_features_input_name: transf_features} # Transformed Text Features
+             text_features_input_name: orig_features} # Orig Text Features
     else:
-        X = {text_features_input_name: transf_features} # Transformed Text Features
+        X = {text_features_input_name: orig_features} # Orig Text Features
     
     if likes is not None:
         y = {output_name: likes} # Y

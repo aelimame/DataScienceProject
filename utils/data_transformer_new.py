@@ -18,7 +18,7 @@ mvf = MissingValuesFiller()
 ACCOUNT_AGE_SINCE_DATE = dt.datetime(2021, 1, 1) # Jan 1st, 2021 is the date we measure account "age" from
 DEFAULT_NUM_LANGUAGES_TO_FEATUREIZE = 9
 DEFAULT_NUM_USR_TZONES_TO_FEATUREIZE = 10
-DEFAULT_NUM_UTC_TO_FEATUREIZE = 10
+DEFAULT_NUM_UTC_TO_FEATUREIZE = 15
 UTC_FOR_NA_VALUES = 10000000 # Define high value to give unique category to nan values
 
 # TODO Hardcoded outliers limits (Based on manuel data analysis for the moment)
@@ -89,7 +89,9 @@ class LanguagesTransformer( BaseEstimator, TransformerMixin ):
         # Drop any country code (e.g. "en-gb" -> "en")
         X['User Language'] = X['User Language'].apply(lambda strVal: strVal[0:2].lower() )
         # Find the top n languages
-        self._top_n_languages = X['User Language'].value_counts(normalize=True).keys().values[0:self._num_languages_to_featureize]
+        all_languages_in_data = X['User Language'].value_counts(normalize=True).keys().values
+        self._num_languages_to_featureize = min(len(all_languages_in_data), self._num_languages_to_featureize)
+        self._top_n_languages = all_languages_in_data[0:self._num_languages_to_featureize]
         return self
 
     def transform( self, X, y = None ):
@@ -125,7 +127,9 @@ class LocationAdvancedTransformer( BaseEstimator, TransformerMixin ):
         # User time zone to lower case
         X['User Time Zone'] = X['User Time Zone'].apply(lambda str_val: str(str_val).lower())
         # Find the top time zones
-        self._top_n_usr_tzones = X['User Time Zone'].value_counts(normalize=True).keys().values[0:self._num_tzones_to_featureize]
+        all_time_zones_in_data = X['User Time Zone'].value_counts(normalize=True).keys().values
+        self._num_tzones_to_featureize = min(len(all_time_zones_in_data), self._num_tzones_to_featureize)
+        self._top_n_usr_tzones = all_time_zones_in_data[0:self._num_tzones_to_featureize]
 
         # UTC
         # TODO nan need to be a category other than values present in the data!
@@ -134,7 +138,9 @@ class LocationAdvancedTransformer( BaseEstimator, TransformerMixin ):
         X['UTC Offset'] = np.floor((X['UTC Offset']/60/60)).astype(int)
         X['UTC Offset'] = X['UTC Offset'].apply(lambda str_val: str(str_val).lower())
         # Find the top UTC zones
-        self._top_n_utc_zones = X['UTC Offset'].value_counts(normalize=True).keys().values[0:self._num_utc_to_featureize]
+        all_utcs_in_data = X['UTC Offset'].value_counts(normalize=True).keys().values
+        self._num_utc_to_featureize = min(len(all_utcs_in_data), self._num_utc_to_featureize)
+        self._top_n_utc_zones = all_utcs_in_data[0:self._num_utc_to_featureize]
 
         return self
 
@@ -369,8 +375,8 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
 
         # Date features and pipeline
         datetime_features = ['Profile Creation Timestamp']
-        datetime_pipleline = Pipeline(steps = [('datetime_transformer', DateTimeTransformer(datetime_features))#,
-                                              #('scaler', StandardScaler())
+        datetime_pipleline = Pipeline(steps = [('datetime_transformer', DateTimeTransformer(datetime_features)),
+                                               ('datetime_scaler', RobustScaler())
                                               ])
 
         # Binary features and pipeline
@@ -398,8 +404,8 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
         numerical_pipeline = Pipeline(steps = [('num_transformer', NumericalTransformer(numerical_features)),
                                                 # TODO see IterativeImputer()?
                                                 #('imputer', IterativeImputer(initial_strategy = 'median'))#,
-                                                ('imputer', SimpleImputer(strategy = 'median'))#,
-                                                #('num_scaler', StandardScaler())
+                                                ('imputer', SimpleImputer(strategy = 'median')),
+                                                ('num_scaler', RobustScaler())
                                               ])
 
         # Combining numerical and categorical piepline into one full big pipeline horizontally
@@ -413,7 +419,7 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
                                                         ('categorical_pipeline', categorical_pipeline),
                                                         ('language_pipeline', language_pipeline),
                                                         ('datetime_pipleline', datetime_pipleline),
-                                                        #('location_adv_transformer', location_adv_transformer),
+                                                        ('location_adv_transformer', location_adv_transformer),
                                                        ])
         self.color_transformer = ColorsTransformer(color_features)
 

@@ -33,7 +33,7 @@ TEXT_FEATURES_INPUT_NAME = 'text_features'
 OUTPUT_NAME = 'likes'
 
 # params
-use_scaling_for_X = True
+#use_scaling_for_X = True
 use_scaling_for_y = False # TODO Don't use with loss RMSLE!?
 include_images = True
 random_seed = 42
@@ -93,8 +93,6 @@ def main():
     print('\n\nEvaluating on 1 simple Train/Valid split')
     data_X, data_y = load_x_y_from_loaders(images_loader=images_loader,
                                         text_data_loader=text_data_loader,
-                                        data_transformer=data_transformer,
-                                        transform_only=False, # TODO Fit and Transform
                                         image_input_name=IMAGE_INPUT_NAME,
                                         text_features_input_name=TEXT_FEATURES_INPUT_NAME,
                                         output_name=OUTPUT_NAME,
@@ -137,15 +135,21 @@ def main():
         valid_y=dict({OUTPUT_NAME: valid_y})
 
 
-    # Using scaling for features
-    if use_scaling_for_X:
-        sc_x = RobustScaler()
+    # Fit/Transform on Train and transform Valid
+    data_transformer.fit(train_X[TEXT_FEATURES_INPUT_NAME])
+    train_X[TEXT_FEATURES_INPUT_NAME] = data_transformer.transform(train_X[TEXT_FEATURES_INPUT_NAME])
 
-        # Fit and Transform on Train
-        train_X[TEXT_FEATURES_INPUT_NAME] = sc_x.fit_transform(train_X[TEXT_FEATURES_INPUT_NAME])
+    valid_X[TEXT_FEATURES_INPUT_NAME] = data_transformer.transform(valid_X[TEXT_FEATURES_INPUT_NAME])
 
-        # Transform only on Valid
-        valid_X[TEXT_FEATURES_INPUT_NAME] = sc_x.transform(valid_X[TEXT_FEATURES_INPUT_NAME])
+    # TODO  Using scaling for features: Not needed anymore, it is now done inside data_transformer
+#    if use_scaling_for_X:
+#        sc_x = RobustScaler()
+#
+#        # Fit and Transform on Train
+#        train_X[TEXT_FEATURES_INPUT_NAME] = sc_x.fit_transform(train_X[TEXT_FEATURES_INPUT_NAME])
+#
+#        # Transform only on Valid
+#        valid_X[TEXT_FEATURES_INPUT_NAME] = sc_x.transform(valid_X[TEXT_FEATURES_INPUT_NAME])
 
     # Using scaling for target (Dont use with loss RMSLE!)
     if use_scaling_for_y:
@@ -243,8 +247,6 @@ def main():
         test_profiles_ids_list = test_text_data_loader.get_orig_features()['Id'].values
         test_X = load_x_y_from_loaders(images_loader=test_images_loader,
                                     text_data_loader=test_text_data_loader,
-                                    data_transformer=data_transformer,
-                                    transform_only=False, # TODO Transform only (Not implemented yet, use fit_transform)
                                     image_input_name=IMAGE_INPUT_NAME,
                                     text_features_input_name=TEXT_FEATURES_INPUT_NAME,
                                     output_name=OUTPUT_NAME,
@@ -259,6 +261,9 @@ def main():
 
         # TODO re fit model again on data_X data_y?
         # ...
+
+        # Tansform Test TEXT_FEATURES
+        test_X[TEXT_FEATURES_INPUT_NAME] = data_transformer.transform(test_X[TEXT_FEATURES_INPUT_NAME])
 
         # -- Predict on Test set --
         test_pred_y = model.predict(test_X)
