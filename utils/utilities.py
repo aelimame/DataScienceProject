@@ -37,6 +37,8 @@ def load_x_y_from_loaders(images_loader,
     # Do it here?
     if 'Num of Profile Likes' in orig_features:
        orig_features = orig_features[orig_features['Num of Profile Likes'] < 200000]
+    
+    profiles_ids_list = orig_features['Id'].values # Update profiles_ids_list
 
     # Extract Y
     if 'Num of Profile Likes' in orig_features:

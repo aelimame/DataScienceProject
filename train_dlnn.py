@@ -21,7 +21,7 @@ from sklearn.preprocessing import StandardScaler, PowerTransformer, RobustScaler
 # Project imports
 from utils.images_loader import ImagesLoader
 from utils.text_data_loader import TextDataLoader
-from utils.data_transformer import HAL9001DataTransformer
+from utils.data_transformer_new import HAL9001DataTransformer
 from utils.utilities import plot_history
 from utils.utilities import rmsle, rmsle_debug
 from utils.utilities import load_x_y_from_loaders
@@ -99,7 +99,7 @@ def main():
                                         profiles_ids_list=None, # Load all profiles in data
                                         include_images=include_images)
     if include_images:
-        print('Data shape X: {:} {:}, y: {:}'.format(data_X[IMAGE_INPUT_NAME].shape, data_X[TEXT_FEATURES_INPUT_NAME], data_y[OUTPUT_NAME].shape))
+        print('Data shape X: {:} {:}, y: {:}'.format(data_X[IMAGE_INPUT_NAME].shape, data_X[TEXT_FEATURES_INPUT_NAME].shape, data_y[OUTPUT_NAME].shape))
     else:
         print('Data shape X: {:}, y: {:}'.format(data_X[TEXT_FEATURES_INPUT_NAME].shape, data_y[OUTPUT_NAME].shape))
 
