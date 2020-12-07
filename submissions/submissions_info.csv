@@ -17,3 +17,4 @@ v14, 04-12-2020,401599e19aec5c52f47842ec334eb194f9074102,"Voting GBReg+XGBoost D
 v15, 05-12-2020,13698d08d2ccc7f37e003f61a2d43de806688ccd,"Voting GBReg+XGBoost-DataTransformLikeV7 with HyperParams | No outliers clipping nor Dropping And Num Likes limited 0-200K", 1.74601,
 v16, 05-12-2020,a57de60e6538f213a6e34ba67abbee26caf2da46,"GBR and everything as V7 except RobustScaler instead of Standard Scaler on X", 1.75748,
 v17, 06-12-2020,8190de509cfeb39c445d712d8ae08c6bcae4273f,"VotingBaggGbrXgBoost-NewDataTransf (Pipelines) MoreFeature: UTC|TimeZones (Onehot) ", 1.71717, 1.7081239507
+v18, 07-12-2020,a7c230265d2271b9a389d309998d8007e9022d54,"VotingBaggGbrXgBoost-NewDataTransf + HyperParams", 1.71223, 1.7060259446
