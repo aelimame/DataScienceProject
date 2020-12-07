@@ -52,7 +52,7 @@ include_images = False
 random_seed = 42
 
 # Change this generate a prediction on test
-predict_on_test = True
+predict_on_test = False
 
 # data paths
 train_text_path = r'./src_data/train.csv'
@@ -291,7 +291,7 @@ def main():
         # Create log folder if does not exist
         if not Path(test_tosubmit_folder).exists():
             os.mkdir(test_tosubmit_folder)
-        test_name = 'V17-VotingBaggGbrXgBoost-NewDataTransf-MoreFeature-RandState42-CoxBoxY-gitversion-xxxx-2020-12-05'
+        test_name = 'V17-VotingBaggGbrXgBoost-NewDataTransf-MoreFeature-RandState42-CoxBoxY-gitversion-xxxx-2020-12-06'
         prediction_file_save_path = os.path.join(test_tosubmit_folder, test_name+'.csv')
         print('\nSaving prediction to "{:}"'.format(prediction_file_save_path))
         test_pd.to_csv(prediction_file_save_path, sep=',', index=False)
