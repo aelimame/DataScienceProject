@@ -212,7 +212,7 @@ def main():
     #Voting regressor
     voting_regressor = VotingRegressor([('BagGbr', bagging_gbr),
                                         ('BagXgb', bagging_xgb)],
-                                        ('BagGbm', bagging_gbm)],
+                                        #('BagGbm', bagging_gbm)],
                                         #('BagRanFrst', bagging_rand_forest)],
                                         n_jobs=-1)
 
