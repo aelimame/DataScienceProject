@@ -2,6 +2,7 @@
 #import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 
 import tensorflow as tf
 import tensorflow.keras.backend as K
@@ -34,12 +35,12 @@ OUTPUT_NAME = 'likes'
 
 # params
 #use_scaling_for_X = True
-use_scaling_for_y = False # TODO Don't use with loss RMSLE!?
+use_scaling_for_y = True # TODO Don't use with loss RMSLE!?
 include_images = True
 random_seed = 42
 
 # Change this generate a prediction on test
-predict_on_test = False
+predict_on_test = True
 
 # data paths
 train_text_path = r'./src_data/train.csv'
@@ -49,9 +50,9 @@ test_images_folder = r'./src_data/test_profile_images'
 log_folder = 'logs'
 
 # Model Hyper-params TODO move to json file? for better modularity and tracking
-learning_rate = 0.002
+learning_rate = 0.001
 training_batch_size = 32 #32
-n_epochs = 17
+n_epochs = 10
 
 # GPU specific
 #os.environ['CUDA_VISIBLE_DEVICES']='1'
@@ -140,16 +141,6 @@ def main():
     train_X[TEXT_FEATURES_INPUT_NAME] = data_transformer.transform(train_X[TEXT_FEATURES_INPUT_NAME])
 
     valid_X[TEXT_FEATURES_INPUT_NAME] = data_transformer.transform(valid_X[TEXT_FEATURES_INPUT_NAME])
-
-    # TODO  Using scaling for features: Not needed anymore, it is now done inside data_transformer
-#    if use_scaling_for_X:
-#        sc_x = RobustScaler()
-#
-#        # Fit and Transform on Train
-#        train_X[TEXT_FEATURES_INPUT_NAME] = sc_x.fit_transform(train_X[TEXT_FEATURES_INPUT_NAME])
-#
-#        # Transform only on Valid
-#        valid_X[TEXT_FEATURES_INPUT_NAME] = sc_x.transform(valid_X[TEXT_FEATURES_INPUT_NAME])
 
     # Using scaling for target (Dont use with loss RMSLE!)
     if use_scaling_for_y:
@@ -271,14 +262,26 @@ def main():
         # Using scaling for target (Dont use with loss RMSLE!)
         if use_scaling_for_y:
             # Need to do the inverse y transform done above!
-            scaled_test_pred_y = (self.power_transformer.inverse_transform(test_pred_y.reshape(-1,1)) - 1).astype(int)
+            scaled_test_pred_y = (pt_cox_y.inverse_transform(test_pred_y.reshape(-1,1)) - 1).astype(int)
 
             # Make sure scaled back targets are not negatives!
             scaled_target = np.clip(scaled_test_pred_y, a_min=0, a_max=None)
             test_pred_y = scaled_target
 
-        # -- save to file --
-        # TODO  like in tain_predict?
+            # Store test set predictions in DataFrame and save to file
+            test_pd = pd.DataFrame()
+            test_pd['Id'] = test_profiles_ids_list
+            test_pd['Predicted'] = test_pred_y
+
+            test_tosubmit_folder = os.path.join(log_folder,'V-NNN-CombinedNeuralNetwork')
+            # Create log folder if does not exist
+            if not Path(test_tosubmit_folder).exists():
+                os.mkdir(test_tosubmit_folder)
+            test_name = 'VNNN-CombinedNeuralNetwork-2020-12-087'
+
+            prediction_file_save_path = os.path.join(test_tosubmit_folder, test_name+'.csv')
+            print('\nSaving prediction to "{:}"'.format(prediction_file_save_path))
+            test_pd.to_csv(prediction_file_save_path, sep=',', index=False)
 
 
 if __name__ == '__main__':

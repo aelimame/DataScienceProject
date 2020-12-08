@@ -53,7 +53,7 @@ include_images = False
 random_seed = 42
 
 # Change this generate a prediction on test
-predict_on_test = False
+predict_on_test = True
 
 # data paths
 train_text_path = r'./src_data/train.csv'
