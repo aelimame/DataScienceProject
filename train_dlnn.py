@@ -35,7 +35,7 @@ OUTPUT_NAME = 'likes'
 
 # params
 #use_scaling_for_X = True
-use_scaling_for_y = True # TODO Don't use with loss RMSLE!?
+use_scaling_for_y = False # TODO Don't use with loss RMSLE!?
 include_images = True
 random_seed = 42
 
@@ -52,7 +52,7 @@ log_folder = 'logs'
 # Model Hyper-params TODO move to json file? for better modularity and tracking
 learning_rate = 0.001
 training_batch_size = 32 #32
-n_epochs = 10
+n_epochs = 15
 
 # GPU specific
 #os.environ['CUDA_VISIBLE_DEVICES']='1'
@@ -268,20 +268,20 @@ def main():
             scaled_target = np.clip(scaled_test_pred_y, a_min=0, a_max=None)
             test_pred_y = scaled_target
 
-            # Store test set predictions in DataFrame and save to file
-            test_pd = pd.DataFrame()
-            test_pd['Id'] = test_profiles_ids_list
-            test_pd['Predicted'] = test_pred_y
+        # Store test set predictions in DataFrame and save to file
+        test_pd = pd.DataFrame()
+        test_pd['Id'] = test_profiles_ids_list
+        test_pd['Predicted'] = test_pred_y
 
-            test_tosubmit_folder = os.path.join(log_folder,'V-NNN-CombinedNeuralNetwork')
-            # Create log folder if does not exist
-            if not Path(test_tosubmit_folder).exists():
-                os.mkdir(test_tosubmit_folder)
-            test_name = 'VNNN-CombinedNeuralNetwork-2020-12-087'
+        test_tosubmit_folder = os.path.join(log_folder,'V-NNN-CombinedNeuralNetwork')
+        # Create log folder if does not exist
+        if not Path(test_tosubmit_folder).exists():
+            os.mkdir(test_tosubmit_folder)
+        test_name = 'VNNN-CombinedNeuralNetwork-2020-12-087'
 
-            prediction_file_save_path = os.path.join(test_tosubmit_folder, test_name+'.csv')
-            print('\nSaving prediction to "{:}"'.format(prediction_file_save_path))
-            test_pd.to_csv(prediction_file_save_path, sep=',', index=False)
+        prediction_file_save_path = os.path.join(test_tosubmit_folder, test_name+'.csv')
+        print('\nSaving prediction to "{:}"'.format(prediction_file_save_path))
+        test_pd.to_csv(prediction_file_save_path, sep=',', index=False)
 
 
 if __name__ == '__main__':

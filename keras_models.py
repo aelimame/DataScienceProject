@@ -116,13 +116,13 @@ def ImageAndTextModel(image_height, image_width, image_nbr_channels, nbr_text_fe
     # Dense (TODO embeding?) for text features
     text_features = text_features_input
     text_features = Dense(nbr_text_features, activation='relu', kernel_initializer=kern_init)(text_features)
-    #text_features = Dropout(0.25)(text_features)
+    text_features = Dropout(0.25)(text_features)
     text_features = Dense(32, activation='relu', kernel_initializer=kern_init)(text_features)
-    #text_features = Dropout(0.25)(text_features)
+    text_features = Dropout(0.25)(text_features)
     text_features = Dense(64, activation='relu', kernel_initializer=kern_init)(text_features)
-    #text_features = Dropout(0.25)(text_features)
-    # text_features = Dense(512, activation='relu', kernel_initializer=kern_init)(text_features)
-    # text_features = Dropout(0.25)(text_features)
+    text_features = Dropout(0.25)(text_features)
+    text_features = Dense(512, activation='relu', kernel_initializer=kern_init)(text_features)
+    text_features = Dropout(0.25)(text_features)
     text_features_out = text_features
 
 
@@ -133,7 +133,7 @@ def ImageAndTextModel(image_height, image_width, image_nbr_channels, nbr_text_fe
 
     # Dense layers
     x = LayerNormalization()(x)
-    #x = Dropout(0.5)(x)
+    x = Dropout(0.5)(x)
     x = Dense(64, activation='relu', kernel_initializer=kern_init)(x)
     x = Dropout(0.5)(x)
     x = Dense(32, activation='relu', kernel_initializer=kern_init)(x)
