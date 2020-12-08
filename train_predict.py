@@ -15,7 +15,7 @@ from operator import itemgetter
 
 import xgboost as xgb
 
-#import lightgbm as lgb
+import lightgbm as lgb
 
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import KFold, RepeatedKFold
@@ -188,7 +188,7 @@ def main():
                                     min_samples_split=3,
                                     min_samples_leaf=6,
                                     random_state=random_seed)
-    bagging_gbr = BaggingRegressor(base_estimator=gbr_model, random_state=random_seed)
+    bagging_gbr = BaggingRegressor(base_estimator=gbr_model, n_estimators=10, random_state=random_seed)
 
     # xgboost
     xgb_model = xgb.XGBRegressor(objective="reg:squaredlogerror",
@@ -200,32 +200,29 @@ def main():
                                 min_child_weight = 1,
                                 subsample = 0.8,
                                 random_state=random_seed)
-    bagging_xgb = BaggingRegressor(base_estimator=xgb_model, random_state=random_seed)
-
-    #Random forest
-    # rand_forest = RandomForestRegressor(bootstrap=True,
-    #                               #max_depth=80,
-    #                               max_features='auto',
-    #                               min_samples_leaf=4,
-    #                               min_samples_split=2,
-    #                               n_estimators=200,
-    #                               random_state=random_seed,
-    #                               verbose=1)
-    # bagging_rand_forest = BaggingRegressor(base_estimator=rand_forest, random_state=random_seed)
+    bagging_xgb = BaggingRegressor(base_estimator=xgb_model, n_estimators=10, random_state=random_seed)
 
     # Lightgbm
-#    gbm = lgb.LGBMRegressor(n_estimators=200,
-#                            num_leaves=20,
-#                            learning_rate=0.05,
-#                            #max_depth = 
-#                            random_state=random_seed)
-#    bagging_gbm = BaggingRegressor(base_estimator=gbm, random_state=random_seed)
+    # RandSearchCV params
+    #'regressor__votingregressor__BagGbm__base_estimator__subsample': 0.8,
+    #'regressor__votingregressor__BagGbm__base_estimator__num_leaves': 40,
+    #'regressor__votingregressor__BagGbm__base_estimator__n_estimators': 100,
+    #'regressor__votingregressor__BagGbm__base_estimator__max_depth': -1,
+    #'regressor__votingregressor__BagGbm__base_estimator__learning_rate': 0.1,
+    #'regressor__votingregressor__BagGbm__base_estimator__colsample_bytree': 1.0
+    gbm = lgb.LGBMRegressor(n_estimators=100,
+                            num_leaves=40,
+                            learning_rate=0.1,
+                            max_depth = -1,
+                            colsample_bytree = 1.0,
+                            subsample = 0.8,
+                            random_state=42)
+    bagging_gbm = BaggingRegressor(base_estimator=gbm, n_estimators=10, random_state=random_seed)
 
     #Voting regressor
     voting_regressor = VotingRegressor([('BagGbr', bagging_gbr),
-                                        ('BagXgb', bagging_xgb)],
-                                        #('BagGbm', bagging_gbm)],
-                                        #('BagRanFrst', bagging_rand_forest)],
+                                        ('BagXgb', bagging_xgb),
+                                        ('BagGbm', bagging_gbm)],
                                         n_jobs=-1)
 
     # -- Pipeline (Has scaling, power_transform and regressor inside) --
@@ -301,11 +298,11 @@ def main():
         # done to the data and any other relevent information. Don't forget
         # to add the prediction file itself to the subfolder submissions\pred_files.
         # Also, name the prediction file based on the model, date, git version...
-        test_tosubmit_folder = os.path.join(log_folder,'V18-VotBagGbrXgBst-HypParm-NewDTransf-MoreFeat')
+        test_tosubmit_folder = os.path.join(log_folder,'V22-VotBag10GbrXgbLgbm-NewDTransf-MoreFeat')
         # Create log folder if does not exist
         if not Path(test_tosubmit_folder).exists():
             os.mkdir(test_tosubmit_folder)
-        test_name = 'V18-VotBagGbrXgBst-HypParm-NewDTransf-MoreFeat-RandState42-CoxBoxY-gitvers-xxxx-2020-12-07'
+        test_name = 'V22-VotBag10GbrXgbLgbm-NewDTransf-MoreFeat-RandState42-CoxBoxY-gitvers-xxxx-2020-12-08'
         prediction_file_save_path = os.path.join(test_tosubmit_folder, test_name+'.csv')
         print('\nSaving prediction to "{:}"'.format(prediction_file_save_path))
         test_pd.to_csv(prediction_file_save_path, sep=',', index=False)
