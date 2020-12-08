@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import datetime as dt
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.preprocessing import OneHotEncoder, LabelEncoder, LabelBinarizer
+from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder
 from sklearn.preprocessing import StandardScaler, PowerTransformer, QuantileTransformer, RobustScaler, Normalizer
 from sklearn.impute import SimpleImputer
 from sklearn.experimental import enable_iterative_imputer 
@@ -360,7 +360,8 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
         # Language features and pipeline
         language_features = ['User Language']
         language_pipeline = Pipeline(steps = [('languages_transformer', LanguagesTransformer(language_features)),
-                                              ('lang_one_hot_encoder', OneHotEncoder(sparse = False))])
+                                              ('lang_one_hot_encoder', OneHotEncoder(sparse = False))
+                                             ])
 
         # Location advanced features and pipeline
         location_adv_features = ['UTC Offset',
@@ -390,7 +391,6 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
         categorical_features = ['Profile Verification Status',
                                 'Profile Category']
         categorical_pipeline = Pipeline(steps = [ ('cat_transformer', CategoricalTransformer(categorical_features)),
-                                                 #('label_encoder', LabelEncoder())
                                                   ('cat_one_hot_encoder', OneHotEncoder(sparse = False))
                                                 ])
 
