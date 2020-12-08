@@ -20,6 +20,7 @@ import xgboost as xgb
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import KFold, RepeatedKFold
 from sklearn.model_selection import cross_val_score
+from sklearn.feature_selection import SelectKBest, f_regression, mutual_info_regression
 from sklearn.preprocessing import StandardScaler, PowerTransformer, QuantileTransformer, RobustScaler, Normalizer
 from sklearn.ensemble import GradientBoostingRegressor, BaggingRegressor, RandomForestRegressor, AdaBoostRegressor, VotingRegressor
 from sklearn.metrics import mean_squared_error
@@ -52,7 +53,7 @@ include_images = False
 random_seed = 42
 
 # Change this generate a prediction on test
-predict_on_test = True
+predict_on_test = False
 
 # data paths
 train_text_path = r'./src_data/train.csv'
@@ -94,10 +95,17 @@ class CustomTargetTransformer(BaseEstimator, TransformerMixin):
 # HAL9001DataTansformer is now inside!
 def create_pipeline(use_scaling_for_y=True,
                     data_transformer=HAL9001DataTransformer(),
+                    feature_selector=None,
                     regressor=GradientBoostingRegressor()):
+
     # X pipeline
-    pipe_X = make_pipeline((data_transformer),
-                           (regressor))
+    if feature_selector:
+        pipe_X = make_pipeline((data_transformer),
+                               (feature_selector),
+                               (regressor))
+    else:
+        pipe_X = make_pipeline((data_transformer),
+                               (regressor))
 
     # y Transformer
     if use_scaling_for_y:
@@ -138,6 +146,10 @@ def main():
     # -- Data Transformer --
     data_transformer = HAL9001DataTransformer()
 
+    # -- Feature Selector --
+    # All current tests show that best performance is achieved using all 66 features
+    feature_selector = None # SelectKBest(mutual_info_regression, k=66)
+
     # -- Prepare Train data X, y --
     print('\n\nEvaluating on Train data using k-fold-CV')
     data_X, data_y = load_x_y_from_loaders(images_loader=images_loader,
@@ -175,8 +187,8 @@ def main():
                                     max_depth=8,
                                     min_samples_split=3,
                                     min_samples_leaf=6,
-                                    random_state=42)
-    bagging_gbr = BaggingRegressor(base_estimator=gbr_model, random_state=42)
+                                    random_state=random_seed)
+    bagging_gbr = BaggingRegressor(base_estimator=gbr_model, random_state=random_seed)
 
     # xgboost
     xgb_model = xgb.XGBRegressor(objective="reg:squaredlogerror",
@@ -187,27 +199,27 @@ def main():
                                 max_depth = 6,
                                 min_child_weight = 1,
                                 subsample = 0.8,
-                                random_state=42)
-    bagging_xgb = BaggingRegressor(base_estimator=xgb_model, random_state=42)
+                                random_state=random_seed)
+    bagging_xgb = BaggingRegressor(base_estimator=xgb_model, random_state=random_seed)
 
-    # Random forest
-#    rand_forest = RandomForestRegressor(bootstrap=True,
-#                                   #max_depth=80,
-#                                   max_features='auto',
-#                                   min_samples_leaf=4,
-#                                   min_samples_split=2,
-#                                   n_estimators=200,
-#                                   random_state=42,
-#                                   verbose=1)
-#    bagging_rand_forest = BaggingRegressor(base_estimator=rand_forest, random_state=42)
+    #Random forest
+    # rand_forest = RandomForestRegressor(bootstrap=True,
+    #                               #max_depth=80,
+    #                               max_features='auto',
+    #                               min_samples_leaf=4,
+    #                               min_samples_split=2,
+    #                               n_estimators=200,
+    #                               random_state=random_seed,
+    #                               verbose=1)
+    # bagging_rand_forest = BaggingRegressor(base_estimator=rand_forest, random_state=random_seed)
 
     # Lightgbm
 #    gbm = lgb.LGBMRegressor(n_estimators=200,
 #                            num_leaves=20,
 #                            learning_rate=0.05,
 #                            #max_depth = 
-#                            random_state=42)
-#    bagging_gbm = BaggingRegressor(base_estimator=gbm, random_state=42)
+#                            random_state=random_seed)
+#    bagging_gbm = BaggingRegressor(base_estimator=gbm, random_state=random_seed)
 
     #Voting regressor
     voting_regressor = VotingRegressor([('BagGbr', bagging_gbr),
@@ -219,6 +231,7 @@ def main():
     # -- Pipeline (Has scaling, power_transform and regressor inside) --
     pipe = create_pipeline(use_scaling_for_y=True,
                            data_transformer=data_transformer,
+                           feature_selector=feature_selector,
                            regressor=voting_regressor)
 
     # -- KFold CV using scorer based on rmsle --
