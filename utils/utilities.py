@@ -1,6 +1,67 @@
 import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_log_error
 import numpy as np
+from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.compose import TransformedTargetRegressor
+from sklearn.preprocessing import StandardScaler, PowerTransformer, QuantileTransformer, RobustScaler, Normalizer
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.pipeline import Pipeline, make_pipeline
+from utils.data_transformer_new import HAL9001DataTransformer
+
+
+# A custom Y transformer
+class CustomTargetTransformer(BaseEstimator, TransformerMixin):
+    def __init__(self):
+        self.power_transformer = PowerTransformer(method='box-cox', standardize=False)
+
+    def fit(self, target):
+        self.power_transformer.fit((target + 1).reshape(-1, 1))
+        return self
+
+    def transform(self, target):
+        transformed_target = self.power_transformer.transform((target.astype(np.float64) + 1).reshape(-1, 1))
+        return transformed_target.reshape(-1).astype(np.float64)
+
+    def inverse_transform(self, target):
+        # Scale target back
+        scaled_target = (self.power_transformer.inverse_transform(target.reshape(-1,1)) - 1).astype(int)
+
+        # Make sure scaled back targets are not negatives!
+        #indexes = np.nonzero(scaled_target <= 0)
+        #scaled_target[indexes] = 0
+        scaled_target = np.clip(scaled_target, a_min=0, a_max=None)
+
+        return scaled_target.reshape(-1)
+
+
+
+# Create a custom pipline that get a Regressor as parmeter and return a pipline
+# HAL9001DataTansformer is now inside!
+def create_pipeline(use_scaling_for_y=True,
+                    data_transformer=HAL9001DataTransformer(),
+                    feature_selector=None,
+                    regressor=GradientBoostingRegressor()):
+
+    # X pipeline
+    if feature_selector:
+        pipe_X = make_pipeline((data_transformer),
+                               (feature_selector),
+                               (regressor))
+    else:
+        pipe_X = make_pipeline((data_transformer),
+                               (regressor))
+
+    # y Transformer
+    if use_scaling_for_y:
+        model = TransformedTargetRegressor(regressor=pipe_X,
+                                           transformer=CustomTargetTransformer(),
+                                           check_inverse=False) # TODO DEBUG For the moment
+    else:
+        model = pipe_X
+
+    return model
+
+
 
 # TODO VERIFY RMSLE metric
 def rmsle(y_true, y_pred, sample_weight=None):
