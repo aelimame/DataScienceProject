@@ -144,7 +144,16 @@ def main():
     test_text_data_loader = TextDataLoader(src_csv_file_path = test_text_path)
 
     # -- Data Transformer --
-    data_transformer = HAL9001DataTransformer()
+#    data_transformer = HAL9001DataTransformer()
+    data_transformer = HAL9001DataTransformer(enable_binary_features = True,
+                                              enable_numerical_features = True,
+                                              enable_profile_col_features = True,
+                                              enable_textual_features = True,
+                                              enable_categorical_features = True,
+                                              enable_datetime_features = True,
+                                              num_languages_to_featureize = 9, # Default 9
+                                              num_tzones_to_featureize = 10, # Default 10
+                                              num_utc_to_featureize = 15) # Default 15
 
     # -- Feature Selector --
     # All current tests show that best performance is achieved using all 66 features
@@ -243,16 +252,16 @@ def main():
                              cv=kfoldcv,
                              n_jobs=-1)
 
-    rep_scores = cross_val_score(pipe,
-                             data_X,
-                             data_y,
-                             scoring=scorer,
-                             cv=rep_kfoldcv,
-                             n_jobs=-1)
+#    rep_scores = cross_val_score(pipe,
+#                             data_X,
+#                             data_y,
+#                             scoring=scorer,
+#                             cv=rep_kfoldcv,
+#                             n_jobs=-1)
 
     # -- Print score --
     print('K-Fold CV RMSLE: %.10f (%.5f)' % (np.mean(scores), np.std(scores)))
-    print('Repeated K-Fold CV RMSLE: %.10f (%.5f)' % (np.mean(rep_scores), np.std(rep_scores)))
+#    print('Repeated K-Fold CV RMSLE: %.10f (%.5f)' % (np.mean(rep_scores), np.std(rep_scores)))
 
 
 

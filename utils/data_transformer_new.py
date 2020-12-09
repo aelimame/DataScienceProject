@@ -124,23 +124,25 @@ class LocationAdvancedTransformer( BaseEstimator, TransformerMixin ):
         X = X.copy()
 
         # User time zone
-        # User time zone to lower case
-        X['User Time Zone'] = X['User Time Zone'].apply(lambda str_val: str(str_val).lower())
-        # Find the top time zones
-        all_time_zones_in_data = X['User Time Zone'].value_counts(normalize=True).keys().values
-        self._num_tzones_to_featureize = min(len(all_time_zones_in_data), self._num_tzones_to_featureize)
-        self._top_n_usr_tzones = all_time_zones_in_data[0:self._num_tzones_to_featureize]
+        if self._num_tzones_to_featureize != 0:
+            # User time zone to lower case
+            X['User Time Zone'] = X['User Time Zone'].apply(lambda str_val: str(str_val).lower())
+            # Find the top time zones
+            all_time_zones_in_data = X['User Time Zone'].value_counts(normalize=True).keys().values
+            self._num_tzones_to_featureize = min(len(all_time_zones_in_data), self._num_tzones_to_featureize)
+            self._top_n_usr_tzones = all_time_zones_in_data[0:self._num_tzones_to_featureize]
 
         # UTC
-        # TODO nan need to be a category other than values present in the data!
-        X['UTC Offset'] = X['UTC Offset'].fillna(UTC_FOR_NA_VALUES)
-        # Floor UTC so we group 1/2 hour offsets
-        X['UTC Offset'] = np.floor((X['UTC Offset']/60/60)).astype(int)
-        X['UTC Offset'] = X['UTC Offset'].apply(lambda str_val: str(str_val).lower())
-        # Find the top UTC zones
-        all_utcs_in_data = X['UTC Offset'].value_counts(normalize=True).keys().values
-        self._num_utc_to_featureize = min(len(all_utcs_in_data), self._num_utc_to_featureize)
-        self._top_n_utc_zones = all_utcs_in_data[0:self._num_utc_to_featureize]
+        if self._num_utc_to_featureize != 0:
+            # TODO nan need to be a category other than values present in the data!
+            X['UTC Offset'] = X['UTC Offset'].fillna(UTC_FOR_NA_VALUES)
+            # Floor UTC so we group 1/2 hour offsets
+            X['UTC Offset'] = np.floor((X['UTC Offset']/60/60)).astype(int)
+            X['UTC Offset'] = X['UTC Offset'].apply(lambda str_val: str(str_val).lower())
+            # Find the top UTC zones
+            all_utcs_in_data = X['UTC Offset'].value_counts(normalize=True).keys().values
+            self._num_utc_to_featureize = min(len(all_utcs_in_data), self._num_utc_to_featureize)
+            self._top_n_utc_zones = all_utcs_in_data[0:self._num_utc_to_featureize]
 
         return self
 
@@ -148,23 +150,28 @@ class LocationAdvancedTransformer( BaseEstimator, TransformerMixin ):
         # Force copy so we don't change X inplace
         X = X.copy()
 
+        self._out_feature_names = []
+
         # User time zone
-        # User time zone to lower case
-        X['User Time Zone'] = X['User Time Zone'].apply(lambda str_val: str(str_val).lower())
-        # If User time zone is other than one of the top n tzones, replace it with "other"
-        X['User Time Zone'] = X['User Time Zone'].apply(lambda str_val: str_val if (str_val in self._top_n_usr_tzones) else "other")
+        if self._num_tzones_to_featureize != 0:
+            # User time zone to lower case
+            X['User Time Zone'] = X['User Time Zone'].apply(lambda str_val: str(str_val).lower())
+            # If User time zone is other than one of the top n tzones, replace it with "other"
+            X['User Time Zone'] = X['User Time Zone'].apply(lambda str_val: str_val if (str_val in self._top_n_usr_tzones) else "other")
+            # Add to _out_feature_names
+            self._out_feature_names += ['User Time Zone']
 
         # UTC
-        # TODO nan need to be a category other than values present in the data!
-        X['UTC Offset'] = X['UTC Offset'].fillna(UTC_FOR_NA_VALUES)
-        # Floor UTC so we group 1/2 hour offsets
-        X['UTC Offset'] = np.floor((X['UTC Offset']/60/60)).astype(int)
-        X['UTC Offset'] = X['UTC Offset'].apply(lambda str_val: str(str_val).lower())
-        # If UTC Offset is other than one of the top n utc zones, replace it with "other"
-        X['UTC Offset'] = X['UTC Offset'].apply(lambda str_val: str_val if (str_val in self._top_n_utc_zones) else "other")
-
-        # Fill _out_feature_names (same as _feature_names here?)
-        self._out_feature_names = self._in_feature_names
+        if self._num_utc_to_featureize != 0:
+            # TODO nan need to be a category other than values present in the data!
+            X['UTC Offset'] = X['UTC Offset'].fillna(UTC_FOR_NA_VALUES)
+            # Floor UTC so we group 1/2 hour offsets
+            X['UTC Offset'] = np.floor((X['UTC Offset']/60/60)).astype(int)
+            X['UTC Offset'] = X['UTC Offset'].apply(lambda str_val: str(str_val).lower())
+            # If UTC Offset is other than one of the top n utc zones, replace it with "other"
+            X['UTC Offset'] = X['UTC Offset'].apply(lambda str_val: str_val if (str_val in self._top_n_utc_zones) else "other")
+            # Add to _out_feature_names
+            self._out_feature_names += ['UTC Offset']
 
         return X[self._out_feature_names].values
 
@@ -346,6 +353,12 @@ class NumericalTransformer( BaseEstimator, TransformerMixin ):
 # HAL9001DataTransformer: Wrapper to call all the transfomers
 class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
     def __init__(self,
+                 enable_binary_features = True,
+                 enable_numerical_features = True,
+                 enable_profile_col_features = True,
+                 enable_textual_features = True,
+                 enable_categorical_features = True,
+                 enable_datetime_features = True,
                  num_languages_to_featureize = DEFAULT_NUM_LANGUAGES_TO_FEATUREIZE,
                  num_tzones_to_featureize = DEFAULT_NUM_USR_TZONES_TO_FEATUREIZE,
                  num_utc_to_featureize = DEFAULT_NUM_UTC_TO_FEATUREIZE,
@@ -354,6 +367,12 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
         # IMPORTANT: Parameters passed to the constructor need to have the same 
         # name as the internal names so sk-learn can find them. This is important
         # to be able to run RandomSearch on them.
+        self.enable_binary_features = enable_binary_features
+        self.enable_numerical_features = enable_numerical_features
+        self.enable_profile_col_features = enable_profile_col_features
+        self.enable_textual_features = enable_textual_features
+        self.enable_categorical_features = enable_categorical_features
+        self.enable_datetime_features = enable_datetime_features
         self.num_languages_to_featureize = num_languages_to_featureize
         self.num_tzones_to_featureize = num_tzones_to_featureize
         self.num_utc_to_featureize = num_utc_to_featureize
@@ -363,83 +382,109 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
         self.has_been_fit = False
 
         # Init all Specific data tansfomers for each goupe of features and build the pipelines
-        
-        # Color features and pipeline
-        color_features = ['Profile Text Color',
-                          'Profile Page Color',
-                          'Profile Theme Color']
-        colors_pipeline = Pipeline(steps = [('colors_transformer', ColorsTransformer(color_features))])
-
-        # Language features and pipeline
-        language_features = ['User Language']
-        language_pipeline = Pipeline(steps = [('languages_transformer', LanguagesTransformer(language_features,
-                                                                                             self.num_languages_to_featureize)),
-                                              ('lang_one_hot_encoder', OneHotEncoder(sparse = False))
-                                             ])
-
-        # Location advanced features and pipeline
-        location_adv_features = ['UTC Offset',
-                                 'User Time Zone']
-        location_adv_transformer = Pipeline(steps = [('location_advanced_transformer', LocationAdvancedTransformer(location_adv_features,
-                                                                                                                   self.num_tzones_to_featureize,
-                                                                                                                   self.num_utc_to_featureize)),
-                                                     ('loc_adv_one_hot_encoder', OneHotEncoder(sparse = False))
-                                                    ])
-
-        # Textual features and pipeline
-        textual_features = ['Personal URL']
-        textual_pipleline = Pipeline(steps = [('text_transformer', TextTransformer(textual_features))])
-
-        # Date features and pipeline
-        datetime_features = ['Profile Creation Timestamp']
-        datetime_pipleline = Pipeline(steps = [('datetime_transformer', DateTimeTransformer(datetime_features)),
-                                               ('datetime_scaler', RobustScaler())
-                                              ])
-
+       
         # Binary features and pipeline
-        binary_features = ['Profile Cover Image Status',
-                           'Is Profile View Size Customized?',
-                           'Location',
-                           'Location Public Visibility']
-        binary_pipeline = Pipeline(steps = [('binary_transformer', BinaryTransformer(binary_features))])
-
-        # Categorical features and pipeline
-        categorical_features = ['Profile Verification Status',
-                                'Profile Category']
-        categorical_pipeline = Pipeline(steps = [ ('cat_transformer', CategoricalTransformer(categorical_features)),
-                                                  ('cat_one_hot_encoder', OneHotEncoder(sparse = False))
-                                                ])
+        if self.enable_binary_features:
+            binary_features = ['Profile Cover Image Status',
+                               'Is Profile View Size Customized?',
+                               'Location',
+                               'Location Public Visibility']
+            binary_pipeline = Pipeline(steps = [('binary_transformer', BinaryTransformer(binary_features))])
 
         # Numerical features to pass down the numerical pipeline
-        numerical_features = ['Num of Followers', 
-                              'Num of People Following', 
-                              'Num of Status Updates',
-                              'Num of Direct Messages', 
-                              'Avg Daily Profile Visit Duration in seconds', 
-                              'Avg Daily Profile Clicks']
-        numerical_pipeline = Pipeline(steps = [('num_transformer', NumericalTransformer(numerical_features)),
-                                                # TODO see IterativeImputer()?
-                                                #('imputer', IterativeImputer(initial_strategy = 'median'))#,
-                                                ('imputer', SimpleImputer(strategy = 'median')),
-                                                ('num_scaler', RobustScaler())
-                                                #('num_scaler', PowerTransformer(method='box-cox', standardize=True))
-                                              ])
+        if self.enable_numerical_features:
+            numerical_features = ['Num of Followers', 
+                                  'Num of People Following', 
+                                  'Num of Status Updates',
+                                  'Num of Direct Messages', 
+                                  'Avg Daily Profile Visit Duration in seconds', 
+                                  'Avg Daily Profile Clicks']
+            numerical_pipeline = Pipeline(steps = [('num_transformer', NumericalTransformer(numerical_features)),
+                                                    # TODO see IterativeImputer()?
+                                                    #('imputer', IterativeImputer(initial_strategy = 'median'))#,
+                                                    ('imputer', SimpleImputer(strategy = 'median')),
+                                                    ('num_scaler', RobustScaler())
+                                                    #('num_scaler', PowerTransformer(method='box-cox', standardize=True))
+                                                  ])
+
+        # Color features and pipeline
+        if self.enable_profile_col_features:
+            color_features = ['Profile Text Color',
+                              'Profile Page Color',
+                              'Profile Theme Color']
+            colors_pipeline = Pipeline(steps = [('colors_transformer', ColorsTransformer(color_features))])
+
+        # Textual features and pipeline
+        if self.enable_textual_features:
+            textual_features = ['Personal URL']
+            textual_pipleline = Pipeline(steps = [('text_transformer', TextTransformer(textual_features))])
+
+        # Categorical features and pipeline
+        if self.enable_categorical_features:
+            categorical_features = ['Profile Verification Status',
+                                    'Profile Category']
+            categorical_pipeline = Pipeline(steps = [('cat_transformer', CategoricalTransformer(categorical_features)),
+                                                     ('cat_one_hot_encoder', OneHotEncoder(sparse = False))
+                                                    ])
+
+        # Date features and pipeline
+        if self.enable_datetime_features:
+            datetime_features = ['Profile Creation Timestamp']
+            datetime_pipleline = Pipeline(steps = [('datetime_transformer', DateTimeTransformer(datetime_features)),
+                                                   ('datetime_scaler', RobustScaler())
+                                                  ])
+
+        # Language features and pipeline
+        if self.num_languages_to_featureize != 0:
+            language_features = ['User Language']
+            language_pipeline = Pipeline(steps = [('languages_transformer', LanguagesTransformer(language_features,
+                                                                                                 self.num_languages_to_featureize)),
+                                                  ('lang_one_hot_encoder', OneHotEncoder(sparse = False))
+                                                 ])
+
+        # Location advanced features and pipeline
+        if self.num_tzones_to_featureize != 0 or self.num_utc_to_featureize !=0:
+            location_adv_features = ['UTC Offset',
+                                     'User Time Zone']
+            location_adv_transformer = Pipeline(steps = [('location_advanced_transformer', LocationAdvancedTransformer(location_adv_features,
+                                                                                                                       self.num_tzones_to_featureize,
+                                                                                                                       self.num_utc_to_featureize)),
+                                                         ('loc_adv_one_hot_encoder', OneHotEncoder(sparse = False))
+                                                        ])
 
         # Combining numerical and categorical piepline into one full big pipeline horizontally
         # using FeatureUnion
-        self.all_features_transformer = FeatureUnion(
-                                    transformer_list = [
-                                                        ('binary_pipeline', binary_pipeline),
-                                                        ('numerical_pipeline', numerical_pipeline),
-                                                        ('colors_pipeline', colors_pipeline),
-                                                        ('textual_pipleline', textual_pipleline),
-                                                        ('categorical_pipeline', categorical_pipeline),
-                                                        ('language_pipeline', language_pipeline),
-                                                        ('datetime_pipleline', datetime_pipleline),
-                                                        ('location_adv_transformer', location_adv_transformer),
-                                                       ])
-        self.color_transformer = ColorsTransformer(color_features)
+        transformer_list = []
 
+        if self.enable_binary_features:
+            transformer_list += [('binary_pipeline', binary_pipeline)]
+
+        if self.enable_numerical_features:
+            transformer_list += [('numerical_pipeline', numerical_pipeline)]
+
+        if self.enable_profile_col_features:
+            transformer_list += [('colors_pipeline', colors_pipeline)]
+
+        if self.enable_textual_features:
+            transformer_list += [('textual_pipleline', textual_pipleline)]
+
+        if self.enable_categorical_features:
+            transformer_list += [('categorical_pipeline', categorical_pipeline)]
+
+        if self.enable_datetime_features:
+            transformer_list += [('datetime_pipleline', datetime_pipleline)]
+
+        if self.num_languages_to_featureize != 0:
+            transformer_list += [('language_pipeline', language_pipeline)]
+        
+        if self.num_tzones_to_featureize != 0 or self.num_utc_to_featureize !=0:
+           transformer_list += [('location_adv_transformer', location_adv_transformer)]
+
+
+        if transformer_list == []:
+            raise ValueError('HAL9001DataTransformer: At least one feature should be enabled!')
+
+        self.all_features_transformer = FeatureUnion(transformer_list = transformer_list)
 
     def fit(self, X, y = None):
         # Force copy so we don't change X inplace
