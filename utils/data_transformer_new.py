@@ -345,9 +345,22 @@ class NumericalTransformer( BaseEstimator, TransformerMixin ):
 
 # HAL9001DataTransformer: Wrapper to call all the transfomers
 class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
-    def __init__(self, copy=True):
-        self.has_been_fit = False
+    def __init__(self,
+                 num_languages_to_featureize = DEFAULT_NUM_LANGUAGES_TO_FEATUREIZE,
+                 num_tzones_to_featureize = DEFAULT_NUM_USR_TZONES_TO_FEATUREIZE,
+                 num_utc_to_featureize = DEFAULT_NUM_UTC_TO_FEATUREIZE,
+                 copy=True):
+
+        # IMPORTANT: Parameters passed to the constructor need to have the same 
+        # name as the internal names so sk-learn can find them. This is important
+        # to be able to run RandomSearch on them.
+        self.num_languages_to_featureize = num_languages_to_featureize
+        self.num_tzones_to_featureize = num_tzones_to_featureize
+        self.num_utc_to_featureize = num_utc_to_featureize
+        # TODO: Other parameters?
+
         self.copy = copy
+        self.has_been_fit = False
 
         # Init all Specific data tansfomers for each goupe of features and build the pipelines
         
@@ -359,14 +372,17 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
 
         # Language features and pipeline
         language_features = ['User Language']
-        language_pipeline = Pipeline(steps = [('languages_transformer', LanguagesTransformer(language_features)),
+        language_pipeline = Pipeline(steps = [('languages_transformer', LanguagesTransformer(language_features,
+                                                                                             self.num_languages_to_featureize)),
                                               ('lang_one_hot_encoder', OneHotEncoder(sparse = False))
                                              ])
 
         # Location advanced features and pipeline
         location_adv_features = ['UTC Offset',
                                  'User Time Zone']
-        location_adv_transformer = Pipeline(steps = [('location_advanced_transformer', LocationAdvancedTransformer(location_adv_features)),
+        location_adv_transformer = Pipeline(steps = [('location_advanced_transformer', LocationAdvancedTransformer(location_adv_features,
+                                                                                                                   self.num_tzones_to_featureize,
+                                                                                                                   self.num_utc_to_featureize)),
                                                      ('loc_adv_one_hot_encoder', OneHotEncoder(sparse = False))
                                                     ])
 
