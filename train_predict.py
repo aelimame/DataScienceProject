@@ -44,6 +44,7 @@ OUTPUT_NAME = 'likes'
 use_scaling_for_X = True
 use_scaling_for_y = True
 include_images = False
+remove_outliers = False
 random_seed = 42
 
 # Change this generate a prediction on test
@@ -189,6 +190,43 @@ def main():
                            data_transformer=data_transformer,
                            feature_selector=feature_selector,
                            regressor=voting_regressor)
+
+
+    # -- TODO: Outliers removal --
+    # This need to be done in a manual k-fold CV loop since we will remove samples
+    # from the training set, which can't be done in the sk-learn pipelines.
+    # It can done based on simple rules like IQR +- 1.5 Q1/Q3 or other methods
+    # like this: https://machinelearningmastery.com/model-based-outlier-detection-and-removal-in-python/
+    #
+    # For more details on doing manual CV, see this post: https://machinelearningmastery.com/nested-cross-validation-for-machine-learning-with-python/
+    #
+    # Pseudo code/steps:
+    """
+    if remove_outliers:
+        cv = KFold(n_splits=10, shuffle=True, random_state=1)
+        result_scores = []
+        for train_ix, valid_ix in cv_outer.split(X):
+            # split data
+            train_X, valid_X = data_X[train_ix, :], data_X[valid_ix, :]
+            train_y, valid_y = data_y[train_ix], data_y[valid_ix]
+
+            # REMOVE OUTLIERS FROM train_X/train_y only.
+            # valid_X and valid_y shoud not be touched! This important to get a representative score.
+            # It is as if we are predicting on the real Test set.
+            # ...
+
+            # Evaluate/train pipe/models defined above using the "cleaned" train and valid sets
+            # curr_score =
+            # ...
+
+            # Save scores
+            result_scores.append(curr_score)
+
+        # Print the result mean/std of the score, this is our indiction if the outlier removal
+        # done above is workin or not. We should get better scores compared to not removing
+        # outliers.
+        print('Accuracy: %.3f (%.3f)' % (mean(outer_results), std(outer_results)))   
+    """
 
     # -- KFold CV using scorer based on rmsle --
     scorer = make_scorer(rmsle, greater_is_better=False)
