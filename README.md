@@ -2,25 +2,17 @@
 
 ## Porject structure and files
 
-train_predict.py : Use to train on Train set (train.csv) and predict on the Test set (test.csv) using simple models (Random Forest, Gradient Boost Regressor...). This uses text featrues only.
-
-train_dlnn.py: Use this to train on text features (train.csv) and images (train_profile_images). This uses Keras DL NN models (see keras_models.py script).
-
-keras_models.py: Keras models to train on text features and images
-
-utils : Folder for utilities, data loaders, data transformer...
-
-utils\text_data_loader.py: Helper class to load features from csv files.
-
-utils\images_loader.py: Helper class to load images from folders. It helps with matching images with profile ids.
-
-utils\text_data_transformer.py: Helper class to transform features.
-
-Notebook-Experiences.ipynb: Jupyter notebook for experiments and analysis
-
-submissions: Folder containing the preditions csv files (on the test set) submitted to Kaggle
-
-submissions\submissions_info.csv: Contains all the information about the submitted predictions (git code version, summary about the models used, score we got on Kaggle...).
+- train_predict.py: Use to train on Train set (train.csv) and predict on the Test set (test.csv) using simple models (Random Forest, Gradient Boost Regressor...). This uses text featrues only.
+- params_search.py: Use for hyper-params search, some code is commented-out but can be uncommented to add to the params search.
+- train_dlnn.py: Use this to train on text features (train.csv) and images (train_profile_images). This uses Keras DL NN models (see keras_models.py script).
+- keras_models.py: Keras models to train on text features and images
+- utils: Folder for utilities, data loaders, data transformer...
+  - utils\text_data_loader.py: Helper class to load features from csv files.
+  - utils\images_loader.py: Helper class to load images from folders. It helps with matching images with profile ids.
+  - utils\text_data_transformer.py: Helper class to transform features.
+- Notebook-Experiences.ipynb: Jupyter notebook for experiments and analysis
+- submissions: Folder containing the preditions csv files (on the test set) submitted to Kaggle
+  - submissions\submissions_info.csv: Contains all the information about the submitted predictions (git code version, summary about the models used, score we got on Kaggle...).
 
 Work in progress!
 
