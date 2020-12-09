@@ -6,7 +6,7 @@ from sklearn.compose import TransformedTargetRegressor
 from sklearn.preprocessing import StandardScaler, PowerTransformer, QuantileTransformer, RobustScaler, Normalizer
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.pipeline import Pipeline, make_pipeline
-from utils.data_transformer_new import HAL9001DataTransformer
+from utils.data_transformer import HAL9001DataTransformer
 
 
 # A custom Y transformer

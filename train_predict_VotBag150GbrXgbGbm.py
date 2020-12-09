@@ -33,7 +33,7 @@ from sklearn.pipeline import Pipeline, make_pipeline
 # Project imports
 from utils.images_loader import ImagesLoader
 from utils.text_data_loader import TextDataLoader
-from utils.data_transformer_new import HAL9001DataTransformer
+from utils.data_transformer import HAL9001DataTransformer
 from utils.utilities import plot_history
 from utils.utilities import rmsle
 from utils.utilities import load_x_y_from_loaders
