@@ -53,12 +53,12 @@ def remove_numerical_outliers(train_X, train_y):
     train_X_numerical = numerical_imputer.fit_transform( train_X[numerical_features] )
     
     #Scale values before removing outliers
-    numerical_scaler = RobustScaler()
-    train_X_numerical = numerical_scaler.fit_transform(train_X_numerical)
+    numerical_scaler = RobustScaler() #TODO try PowerTransformer(method='box-cox', standardize=False)
+    train_X_numerical = numerical_scaler.fit_transform(train_X_numerical) # Need +1 for power transformer
 
     #outliers_remover = IsolationForest(contamination='auto', random_state = random_seed, n_jobs=-1) # 1.709 (0.051)
     #outliers_remover = LocalOutlierFactor(contamination='auto', n_neighbors = 20, leaf_size = 30, n_jobs=-1) #1.706 (0.045)
-    outliers_remover = OneClassSVM(nu=0.01 ) # nu=0.01 -> 1.700 (0.046)
+    outliers_remover = OneClassSVM(nu=0.01) # nu=0.01 -> 1.700 (0.046)
     
     yhat = outliers_remover.fit_predict(train_X_numerical)
 
@@ -130,8 +130,8 @@ def load_x_y_from_loaders(images_loader,
     # TODO outliers removal, should be done outside of the DataTransormer since sklearn
     # does not allow dropping X values (Y and X won't match!)
     # Do it here?
-#    if 'Num of Profile Likes' in orig_features:
-#       orig_features = orig_features[orig_features['Num of Profile Likes'] < 200000]
+    if 'Num of Profile Likes' in orig_features:
+       orig_features = orig_features[orig_features['Num of Profile Likes'] < 200000]
     
     profiles_ids_list = orig_features['Id'].values # Update profiles_ids_list
 

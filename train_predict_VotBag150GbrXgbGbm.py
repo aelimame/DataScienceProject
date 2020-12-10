@@ -20,24 +20,18 @@ import lightgbm as lgb
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import KFold, RepeatedKFold
 from sklearn.model_selection import cross_val_score
-from sklearn.preprocessing import StandardScaler, PowerTransformer, QuantileTransformer, RobustScaler, Normalizer
-from sklearn.ensemble import GradientBoostingRegressor, BaggingRegressor, RandomForestRegressor, AdaBoostRegressor, VotingRegressor
-from sklearn.metrics import mean_squared_error
-from sklearn.metrics import make_scorer
-from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.compose import TransformedTargetRegressor
-from sklearn.pipeline import Pipeline, make_pipeline
-
-
+from sklearn.feature_selection import SelectKBest, f_regression, mutual_info_regression
+from sklearn.ensemble import GradientBoostingRegressor, BaggingRegressor, RandomForestRegressor, AdaBoostRegressor, VotingRegressor, IsolationForest
+from sklearn.metrics import mean_squared_error, make_scorer
 
 # Project imports
 from utils.images_loader import ImagesLoader
 from utils.text_data_loader import TextDataLoader
-from utils.data_transformer import HAL9001DataTransformer
-from utils.utilities import plot_history
+from utils.data_transformer import HAL9001DataTransformer, NumericalTransformer
 from utils.utilities import rmsle
 from utils.utilities import load_x_y_from_loaders
-
+from utils.utilities import create_pipeline
+from utils.utilities import remove_numerical_outliers
 
 
 # Names for acces to data in Dict (to be used with model inputs/output for better referencing)
@@ -49,6 +43,7 @@ OUTPUT_NAME = 'likes'
 use_scaling_for_X = True
 use_scaling_for_y = True
 include_images = False
+remove_outliers = True
 random_seed = 42
 
 # Change this generate a prediction on test
@@ -62,52 +57,6 @@ test_images_folder = r'./src_data/test_profile_images'
 log_folder = 'logs'
 
 
-
-
-# A custom Y transformer
-class CustomTargetTransformer(BaseEstimator, TransformerMixin):
-    def __init__(self):
-        self.power_transformer = PowerTransformer(method='box-cox', standardize=False)
-
-    def fit(self, target):
-        self.power_transformer.fit((target + 1).reshape(-1, 1))
-        return self
-
-    def transform(self, target):
-        transformed_target = self.power_transformer.transform((target.astype(np.float64) + 1).reshape(-1, 1))
-        return transformed_target.reshape(-1).astype(np.float64)
-
-    def inverse_transform(self, target):
-        # Scale target back
-        scaled_target = (self.power_transformer.inverse_transform(target.reshape(-1,1)) - 1).astype(int)
-
-        # Make sure scaled back targets are not negatives!
-        #indexes = np.nonzero(scaled_target <= 0)
-        #scaled_target[indexes] = 0
-        scaled_target = np.clip(scaled_target, a_min=0, a_max=None)
-
-        return scaled_target.reshape(-1)
-
-
-
-# Create a custom pipline that get a Regressor as parmeter and return a pipline
-# HAL9001DataTansformer is now inside!
-def create_pipeline(use_scaling_for_y=True,
-                    data_transformer=HAL9001DataTransformer(),
-                    regressor=GradientBoostingRegressor()):
-    # X pipeline
-    pipe_X = make_pipeline((data_transformer),
-                           (regressor))
-
-    # y Transformer
-    if use_scaling_for_y:
-        model = TransformedTargetRegressor(regressor=pipe_X,
-                                           transformer=CustomTargetTransformer(),
-                                           check_inverse=False) # TODO DEBUG For the moment
-    else:
-        model = pipe_X
-
-    return model
 
 
 # Main program
@@ -136,7 +85,29 @@ def main():
     test_text_data_loader = TextDataLoader(src_csv_file_path = test_text_path)
 
     # -- Data Transformer --
-    data_transformer = HAL9001DataTransformer()
+#    data_transformer = HAL9001DataTransformer()
+    #'regressor__hal9001datatransformer__enable_binary_features': True
+    #'regressor__hal9001datatransformer__enable_numerical_features': True,
+    #'regressor__hal9001datatransformer__enable_profile_col_features': True,
+    #'regressor__hal9001datatransformer__enable_textual_features': True,
+    #'regressor__hal9001datatransformer__enable_categorical_features': True,
+    #'regressor__hal9001datatransformer__enable_datetime_features': True,
+    #'regressor__hal9001datatransformer__num_languages_to_featureize': 11,
+    #'regressor__hal9001datatransformer__num_tzones_to_featureize': 5,
+    #'regressor__hal9001datatransformer__num_utc_to_featureize': 17,
+    data_transformer = HAL9001DataTransformer(enable_binary_features = True,
+                                              enable_numerical_features = True,
+                                              enable_profile_col_features = True,
+                                              enable_textual_features = True,
+                                              enable_categorical_features = True,
+                                              enable_datetime_features = True,
+                                              num_languages_to_featureize = 9, # Default 9
+                                              num_tzones_to_featureize = 10, # Default 10
+                                              num_utc_to_featureize = 15) # Default 15
+
+    # -- Feature Selector --
+    # All current tests show that best performance is achieved using all 66 features
+    feature_selector = None # SelectKBest(mutual_info_regression, k=66)
 
     # -- Prepare Train data X, y --
     print('\n\nEvaluating on Train data using k-fold-CV')
@@ -158,17 +129,11 @@ def main():
     # Pipeline with best searched hyper parms
     print('Buiding and evaluating pipeline with models')
     # RandSearchCV params
-    #'regressor__votingregressor__BagGbr__base_estimator__max_depth': 8,
+    #'regressor__votingregressor__BagGbr__base_estimator__n_estimators': 200,
     #'regressor__votingregressor__BagGbr__base_estimator__max_features': 'sqrt',
-    #'regressor__votingregressor__BagGbr__base_estimator__min_samples_leaf': 6,
+    #'regressor__votingregressor__BagGbr__base_estimator__max_depth': 8,
     #'regressor__votingregressor__BagGbr__base_estimator__min_samples_split': 3,
-    #'regressor__votingregressor__BagGbr__base_estimator__n_estimators': 200
-    #'regressor__votingregressor__BagXgb__base_estimator__min_child_weight': 1,
-    #'regressor__votingregressor__BagXgb__base_estimator__eta': 0.08,
-    #'regressor__votingregressor__BagXgb__base_estimator__max_depth': 6,
-    #'regressor__votingregressor__BagXgb__base_estimator__colsample_bytree': 0.6,
-    #'regressor__votingregressor__BagXgb__base_estimator__n_estimators': 200,
-    #'regressor__votingregressor__BagXgb__base_estimator__subsample': 0.8,
+    #'regressor__votingregressor__BagGbr__base_estimator__min_samples_leaf': 6,
     # GBR
     gbr_model = GradientBoostingRegressor(n_estimators=200,
                                     max_features='sqrt',
@@ -179,6 +144,12 @@ def main():
     bagging_gbr = BaggingRegressor(base_estimator=gbr_model, n_estimators=150, random_state=random_seed)
 
     # xgboost
+    #'regressor__votingregressor__BagXgb__base_estimator__n_estimators': 200,
+    #'regressor__votingregressor__BagXgb__base_estimator__colsample_bytree': 0.6,
+    #'regressor__votingregressor__BagXgb__base_estimator__eta': 0.08,
+    #'regressor__votingregressor__BagXgb__base_estimator__max_depth': 6,
+    #'regressor__votingregressor__BagXgb__base_estimator__min_child_weight': 1,
+    #'regressor__votingregressor__BagXgb__base_estimator__subsample': 0.8,
     xgb_model = xgb.XGBRegressor(objective="reg:squaredlogerror",
                                 eval_metric='rmsle',
                                 n_estimators=200,
@@ -192,12 +163,12 @@ def main():
 
     # Lightgbm
     # RandSearchCV params
-    #'regressor__votingregressor__BagGbm__base_estimator__subsample': 0.8,
-    #'regressor__votingregressor__BagGbm__base_estimator__num_leaves': 40,
     #'regressor__votingregressor__BagGbm__base_estimator__n_estimators': 100,
-    #'regressor__votingregressor__BagGbm__base_estimator__max_depth': -1,
+    #'regressor__votingregressor__BagGbm__base_estimator__num_leaves': 40,
     #'regressor__votingregressor__BagGbm__base_estimator__learning_rate': 0.1,
+    #'regressor__votingregressor__BagGbm__base_estimator__max_depth': -1,
     #'regressor__votingregressor__BagGbm__base_estimator__colsample_bytree': 1.0
+    #'regressor__votingregressor__BagGbm__base_estimator__subsample': 0.8,
     gbm = lgb.LGBMRegressor(n_estimators=100,
                             num_leaves=40,
                             learning_rate=0.1,
@@ -214,9 +185,34 @@ def main():
                                         n_jobs=-1)
 
     # -- Pipeline (Has scaling, power_transform and regressor inside) --
-    pipe = create_pipeline(use_scaling_for_y=True,
+    pipe = create_pipeline(use_scaling_for_y=use_scaling_for_y,
                            data_transformer=data_transformer,
+                           feature_selector=feature_selector,
                            regressor=voting_regressor)
+
+
+    # --  Outliers removal --
+    if remove_outliers:
+        cv_outer = KFold(n_splits=5, shuffle=True, random_state=random_seed)
+        result_scores = []
+        for train_ix, valid_ix in cv_outer.split(data_X):
+            # split data
+            train_X, valid_X = data_X.iloc[train_ix, :], data_X.iloc[valid_ix, :]
+            train_y, valid_y = data_y[train_ix], data_y[valid_ix]
+
+            # REMOVE OUTLIERS FROM train_X/train_y only.
+            train_X, train_y = remove_numerical_outliers(train_X, train_y)
+
+            # Evaluate/train pipe/models defined above using the "cleaned" train and valid sets
+            pipe.fit(train_X, train_y)
+            valid_pred_y = pipe.predict(valid_X)
+            curr_score = rmsle(valid_y, valid_pred_y);
+
+            # Save scores
+            result_scores.append(curr_score)
+
+        # -- Print score --
+        print('\n\nK-Fold CV RMSE OUTLIERS-REMOVED: %.3f (%.3f)\n\n' % (np.mean(result_scores), np.std(result_scores)))   
 
     # -- KFold CV using scorer based on rmsle --
     scorer = make_scorer(rmsle, greater_is_better=False)
@@ -230,16 +226,16 @@ def main():
                              cv=kfoldcv,
                              n_jobs=-1)
 
-    rep_scores = cross_val_score(pipe,
-                             data_X,
-                             data_y,
-                             scoring=scorer,
-                             cv=rep_kfoldcv,
-                             n_jobs=-1)
+#    rep_scores = cross_val_score(pipe,
+#                             data_X,
+#                             data_y,
+#                             scoring=scorer,
+#                             cv=rep_kfoldcv,
+#                             n_jobs=-1)
 
     # -- Print score --
     print('K-Fold CV RMSLE: %.10f (%.5f)' % (np.mean(scores), np.std(scores)))
-    print('Repeated K-Fold CV RMSLE: %.10f (%.5f)' % (np.mean(rep_scores), np.std(rep_scores)))
+#    print('Repeated K-Fold CV RMSLE: %.10f (%.5f)' % (np.mean(rep_scores), np.std(rep_scores)))
 
 
 
@@ -258,10 +254,16 @@ def main():
                                     output_name=OUTPUT_NAME,
                                     profiles_ids_list=test_profiles_ids_list,
                                     include_images=include_images)
+
         # No Need for dict for the moment
         test_X = test_X[TEXT_FEATURES_INPUT_NAME]
 
         print('Test shape {:}'.format(test_X.shape))
+
+        # -- Remove Outliers --
+        if remove_outliers:
+            print('Removing Outliers')
+            data_X, data_y = remove_numerical_outliers(data_X, data_y)
 
         # -- Fit pipe (Transofrmation and model) on all Train data set --
         print('Fitting on all data')
@@ -282,14 +284,14 @@ def main():
         # to reproduce the predictions and track the models used. Make sure
         # to update the sumbmission csv file in submissions folder, add a
         # comment about the model, the features used the new transformations
-        # done to the data and any other relevent information. Don't forget 
+        # done to the data and any other relevent information. Don't forget
         # to add the prediction file itself to the subfolder submissions\pred_files.
         # Also, name the prediction file based on the model, date, git version...
-        test_tosubmit_folder = os.path.join(log_folder,'V21-VotBag150GbrXgbLgbm-NewDTransf-MoreFeat')
+        test_tosubmit_folder = os.path.join(log_folder,'V25-VotBag150GbrXgbLgbm-NumOutlierRmvd')
         # Create log folder if does not exist
         if not Path(test_tosubmit_folder).exists():
             os.mkdir(test_tosubmit_folder)
-        test_name = 'V21-VotBag150GbrXgbLgbm-NewDTransf-MoreFeat-RandState42-CoxBoxY-gitvers-xxxx-2020-12-08'
+        test_name = 'V25-VotBag150GbrXgbLgbm-NumOutlierRmvd-RandState42-CoxBoxY-gitvers-xxxx-2020-12-08'
         prediction_file_save_path = os.path.join(test_tosubmit_folder, test_name+'.csv')
         print('\nSaving prediction to "{:}"'.format(prediction_file_save_path))
         test_pd.to_csv(prediction_file_save_path, sep=',', index=False)
