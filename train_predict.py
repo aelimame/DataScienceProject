@@ -206,13 +206,13 @@ def main():
             # Evaluate/train pipe/models defined above using the "cleaned" train and valid sets
             pipe.fit(train_X, train_y)
             valid_pred_y = pipe.predict(valid_X)
-            curr_score = rmsle(valid_y, valid_pred_y);
+            curr_score = rmsle(valid_y, valid_pred_y)
 
             # Save scores
             result_scores.append(curr_score)
 
         # -- Print score --
-        print('\n\nK-Fold CV RMSE OUTLIERS-REMOVED: %.3f (%.3f)\n\n' % (np.mean(result_scores), np.std(result_scores)))   
+        print('\n\nK-Fold CV RMSE OUTLIERS-REMOVED: %.10f (%.5f)\n\n' % (np.mean(result_scores), np.std(result_scores)))   
 
     # -- KFold CV using scorer based on rmsle --
     scorer = make_scorer(rmsle, greater_is_better=False)
@@ -264,6 +264,7 @@ def main():
         if remove_outliers:
             print('Removing Outliers')
             data_X, data_y = remove_numerical_outliers(data_X, data_y)
+            print('Data (Outliers removed) shape {:} {:}'.format(data_X.shape, data_y.shape))
 
         # -- Fit pipe (Transofrmation and model) on all Train data set --
         print('Fitting on all data')
@@ -287,11 +288,11 @@ def main():
         # done to the data and any other relevent information. Don't forget
         # to add the prediction file itself to the subfolder submissions\pred_files.
         # Also, name the prediction file based on the model, date, git version...
-        test_tosubmit_folder = os.path.join(log_folder,'V22-VotBag10GbrXgbLgbm-NewDTransf-MoreFeat')
+        test_tosubmit_folder = os.path.join(log_folder,'V24-VotBag10GbrXgbLgbm-NumOutlierRmvd-NoManLikesRemv')
         # Create log folder if does not exist
         if not Path(test_tosubmit_folder).exists():
             os.mkdir(test_tosubmit_folder)
-        test_name = 'V22-VotBag10GbrXgbLgbm-NewDTransf-MoreFeat-RandState42-CoxBoxY-gitvers-xxxx-2020-12-08'
+        test_name = 'V24-VotBag10GbrXgbLgbm-NumOutlierRmvd-NoManLikesRemv-RandState42-CoxBoxY-gitvers-xxxx-2020-12-09'
         prediction_file_save_path = os.path.join(test_tosubmit_folder, test_name+'.csv')
         print('\nSaving prediction to "{:}"'.format(prediction_file_save_path))
         test_pd.to_csv(prediction_file_save_path, sep=',', index=False)
