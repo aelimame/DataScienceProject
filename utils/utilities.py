@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_log_error
 import numpy as np
+import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.compose import TransformedTargetRegressor
 from sklearn.preprocessing import StandardScaler, PowerTransformer, QuantileTransformer, RobustScaler, Normalizer
@@ -8,6 +9,10 @@ from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.pipeline import Pipeline, make_pipeline
 from utils.data_transformer import HAL9001DataTransformer
 
+from sklearn.impute import SimpleImputer
+from sklearn.neighbors import LocalOutlierFactor
+from sklearn.preprocessing import RobustScaler
+from sklearn.svm import OneClassSVM
 
 # A custom Y transformer
 class CustomTargetTransformer(BaseEstimator, TransformerMixin):
@@ -34,6 +39,35 @@ class CustomTargetTransformer(BaseEstimator, TransformerMixin):
         return scaled_target.reshape(-1)
 
 
+def remove_numerical_outliers(train_X, train_y):
+    numerical_features = ['Num of Followers',
+                        'Num of People Following',
+                        'Num of Status Updates',
+                        'Num of Direct Messages',
+                        'Avg Daily Profile Visit Duration in seconds',
+                        'Avg Daily Profile Clicks',
+                        'Num of Profile Likes']
+    
+    #Impute values rather than drop
+    numerical_imputer = SimpleImputer(strategy = 'median')
+    train_X_numerical = numerical_imputer.fit_transform( train_X[numerical_features] )
+    
+    #Scale values before removing outliers
+    numerical_scaler = RobustScaler()
+    train_X_numerical = numerical_scaler.fit_transform(train_X_numerical)
+
+    #outliers_remover = IsolationForest(contamination='auto', random_state = random_seed, n_jobs=-1) # 1.709 (0.051)
+    #outliers_remover = LocalOutlierFactor(contamination='auto', n_neighbors = 20, leaf_size = 30, n_jobs=-1) #1.706 (0.045)
+    outliers_remover = OneClassSVM(nu=0.01 ) # nu=0.01 -> 1.700 (0.046)
+    
+    yhat = outliers_remover.fit_predict(train_X_numerical)
+
+    # select all rows that are not outliers
+    mask = yhat != -1
+    train_X = pd.DataFrame(data=train_X.values[mask, :], columns=train_X.columns)
+    train_y = train_y[mask]
+
+    return ( train_X, train_y )
 
 # Create a custom pipline that get a Regressor as parmeter and return a pipline
 # HAL9001DataTansformer is now inside!

@@ -23,10 +23,6 @@ from sklearn.model_selection import cross_val_score
 from sklearn.feature_selection import SelectKBest, f_regression, mutual_info_regression
 from sklearn.ensemble import GradientBoostingRegressor, BaggingRegressor, RandomForestRegressor, AdaBoostRegressor, VotingRegressor, IsolationForest
 from sklearn.metrics import mean_squared_error, make_scorer
-from sklearn.impute import SimpleImputer
-from sklearn.neighbors import LocalOutlierFactor
-from sklearn.preprocessing import RobustScaler
-from sklearn.svm import OneClassSVM
 
 # Project imports
 from utils.images_loader import ImagesLoader
@@ -35,7 +31,7 @@ from utils.data_transformer import HAL9001DataTransformer, NumericalTransformer
 from utils.utilities import rmsle
 from utils.utilities import load_x_y_from_loaders
 from utils.utilities import create_pipeline
-
+from utils.utilities import remove_numerical_outliers
 
 
 # Names for acces to data in Dict (to be used with model inputs/output for better referencing)
@@ -51,7 +47,7 @@ remove_outliers = True
 random_seed = 42
 
 # Change this generate a prediction on test
-predict_on_test = False
+predict_on_test = True
 
 # data paths
 train_text_path = r'./src_data/train.csv'
@@ -195,15 +191,7 @@ def main():
                            regressor=voting_regressor)
 
 
-    # -- TODO: Outliers removal --
-    # This need to be done in a manual k-fold CV loop since we will remove samples
-    # from the training set, which can't be done in the sk-learn pipelines.
-    # It can done based on simple rules like IQR +- 1.5 Q1/Q3 or other methods
-    # like this: https://machinelearningmastery.com/model-based-outlier-detection-and-removal-in-python/
-    #
-    # For more details on doing manual CV, see this post: https://machinelearningmastery.com/nested-cross-validation-for-machine-learning-with-python/
-    #
-    # Pseudo code/steps:
+    # --  Outliers removal --
     if remove_outliers:
         cv_outer = KFold(n_splits=5, shuffle=True, random_state=random_seed)
         result_scores = []
@@ -213,36 +201,7 @@ def main():
             train_y, valid_y = data_y[train_ix], data_y[valid_ix]
 
             # REMOVE OUTLIERS FROM train_X/train_y only.
-            # valid_X and valid_y shoud not be touched! This important to get a representative score.
-            # It is as if we are predicting on the real Test set.
-            # identify outliers in the training dataset
-            # Choose only the columns we want to use in our outliers selection
-            numerical_features = ['Num of Followers',
-                                'Num of People Following',
-                                'Num of Status Updates',
-                                'Num of Direct Messages',
-                                'Avg Daily Profile Visit Duration in seconds',
-                                'Avg Daily Profile Clicks',
-                                'Num of Profile Likes']
-            
-            #Impute values rather than drop
-            numerical_imputer = SimpleImputer(strategy = 'median')
-            train_X_numerical = numerical_imputer.fit_transform( train_X[numerical_features] )
-            
-            #Scale values before removing outliers
-            numerical_scaler = RobustScaler()
-            train_X_numerical = numerical_scaler.fit_transform(train_X_numerical)
-
-            #outliers_remover = IsolationForest(contamination='auto', random_state = random_seed, n_jobs=-1) # 1.709 (0.051)
-            #outliers_remover = LocalOutlierFactor(contamination='auto', n_neighbors = 20, leaf_size = 30, n_jobs=-1) #1.706 (0.045)
-            outliers_remover = OneClassSVM(nu=0.01) # 1.700 (0.046)
-            
-            yhat = outliers_remover.fit_predict(train_X_numerical)
-
-            # select all rows that are not outliers
-            mask = yhat != -1
-            train_X = pd.DataFrame(data=train_X.values[mask, :], columns=train_X.columns)
-            train_y = train_y[mask]
+            train_X, train_y = remove_numerical_outliers(train_X, train_y)
 
             # Evaluate/train pipe/models defined above using the "cleaned" train and valid sets
             pipe.fit(train_X, train_y)
@@ -252,10 +211,8 @@ def main():
             # Save scores
             result_scores.append(curr_score)
 
-        # Print the result mean/std of the score, this is our indiction if the outlier removal
-        # done above is working or not. We should get better scores compared to not removing
-        # outliers.
-        print('\nK-Fold CV RMSE OUTLIERS-REMOVED: %.3f (%.3f)' % (np.mean(result_scores), np.std(result_scores)))   
+        # -- Print score --
+        print('\n\nK-Fold CV RMSE OUTLIERS-REMOVED: %.3f (%.3f)\n\n' % (np.mean(result_scores), np.std(result_scores)))   
 
     # -- KFold CV using scorer based on rmsle --
     scorer = make_scorer(rmsle, greater_is_better=False)
@@ -297,10 +254,16 @@ def main():
                                     output_name=OUTPUT_NAME,
                                     profiles_ids_list=test_profiles_ids_list,
                                     include_images=include_images)
+
         # No Need for dict for the moment
         test_X = test_X[TEXT_FEATURES_INPUT_NAME]
 
         print('Test shape {:}'.format(test_X.shape))
+
+        # -- Remove Outliers --
+        if remove_outliers:
+            print('Removing Outliers')
+            data_X, data_y = remove_numerical_outliers(data_X, data_y)
 
         # -- Fit pipe (Transofrmation and model) on all Train data set --
         print('Fitting on all data')
