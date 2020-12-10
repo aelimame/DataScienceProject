@@ -22,3 +22,4 @@ v19, 08-12-2020,625f6db6356cb8f15d8db510c17d11ad4582d6fe,"CombinedNeuralNetwork"
 v20, 08-12-2020,0952b3de65e78bf6a7ad361744f37cbe02cb0b81,"CombinedNeuralNetwork", 1.87259,
 v21, 08-12-2020,c35d656fc751fee297a8e37293f2939ea3655501,"VotingBagg150GbrXgbLgbm + Better hyperparms", 1.70878, 1.6994250152
 v22, 08-12-2020,ce8e7d2574a84e3aa29d42c4084fd0d98599ac82,"Same as V21 but 10 Bagging instead of 150 (VotingBagg10GbrXgbLgbm)", 1.71225, 1.7014190881
+v23, 08-12-2020,51f6a38cf1992731a80e3bf91415039dee9ffe2b,"Same as v21(VotBag10GbrXgbLgbm) + NoOutliers (manual Like over 200K still there!)", 1.70488,
