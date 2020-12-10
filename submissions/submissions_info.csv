@@ -24,3 +24,4 @@ v21, 08-12-2020,c35d656fc751fee297a8e37293f2939ea3655501,"VotingBagg150GbrXgbLgb
 v22, 08-12-2020,ce8e7d2574a84e3aa29d42c4084fd0d98599ac82,"Same as V21 but 10 Bagging instead of 150 (VotingBagg10GbrXgbLgbm)", 1.71225, 1.7014190881
 v23, 08-12-2020,51f6a38cf1992731a80e3bf91415039dee9ffe2b,"Same as v21(VotBag10GbrXgbLgbm) + NoOutliers (manual Like over 200K still there!)", 1.70488,
 v24, 09-12-2020,bb2e3fb8dead1e173de1ab4cc22040f8ca98662d,"Same as v23(VotBag10GbrXgbLgbm) + NoOutliers BUT NO manual removal of Like over 200K", 1.70765, 1.7075851850
+v25, 09-12-2020,94fc6adff6e14ad4e53309a6666ad4180128f665,"Similar to v22 Outliers removal (And we manually remove Likes over 200K) VotBag 150 GbrXgbLgbm", 1.70923, 1.6994459518
