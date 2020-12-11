@@ -23,6 +23,7 @@ from sklearn.model_selection import cross_val_score
 from sklearn.feature_selection import SelectKBest, f_regression, mutual_info_regression
 from sklearn.ensemble import GradientBoostingRegressor, BaggingRegressor, RandomForestRegressor, AdaBoostRegressor, VotingRegressor, IsolationForest
 from sklearn.metrics import mean_squared_error, make_scorer
+from sklearn.base import clone
 
 # Project imports
 from utils.images_loader import ImagesLoader
@@ -31,7 +32,7 @@ from utils.data_transformer import HAL9001DataTransformer, NumericalTransformer
 from utils.utilities import rmsle
 from utils.utilities import load_x_y_from_loaders
 from utils.utilities import create_pipeline
-from utils.utilities import remove_numerical_outliers
+from utils.utilities import remove_numerical_outliers, remove_numerical_outliers_iqr
 
 
 # Names for acces to data in Dict (to be used with model inputs/output for better referencing)
@@ -175,7 +176,7 @@ def main():
                             max_depth = -1,
                             colsample_bytree = 1.0,
                             subsample = 0.8,
-                            random_state=42)
+                            random_state=random_seed)
     bagging_gbm = BaggingRegressor(base_estimator=gbm, n_estimators=10, random_state=random_seed)
 
     #Voting regressor
@@ -191,7 +192,7 @@ def main():
                            regressor=voting_regressor)
 
 
-    # --  Outliers removal --
+    # --  Outliers removal k-fold CV evaluation --
     if remove_outliers:
         cv_outer = KFold(n_splits=5, shuffle=True, random_state=random_seed)
         result_scores = []
@@ -201,11 +202,16 @@ def main():
             train_y, valid_y = data_y[train_ix], data_y[valid_ix]
 
             # REMOVE OUTLIERS FROM train_X/train_y only.
-            train_X, train_y = remove_numerical_outliers(train_X, train_y)
+            train_X, train_y = remove_numerical_outliers_iqr(train_X, train_y)
 
             # Evaluate/train pipe/models defined above using the "cleaned" train and valid sets
-            pipe.fit(train_X, train_y)
-            valid_pred_y = pipe.predict(valid_X)
+            pipe = create_pipeline(use_scaling_for_y=use_scaling_for_y,
+                           data_transformer=data_transformer,
+                           feature_selector=feature_selector,
+                           regressor=voting_regressor)
+            pipe_outliers = clone(pipe)
+            pipe_outliers.fit(train_X, train_y)
+            valid_pred_y = pipe_outliers.predict(valid_X)
             curr_score = rmsle(valid_y, valid_pred_y)
 
             # Save scores
@@ -217,16 +223,22 @@ def main():
     # -- KFold CV using scorer based on rmsle --
     scorer = make_scorer(rmsle, greater_is_better=False)
     kfoldcv = KFold(n_splits=5, random_state=random_seed, shuffle=True)
-    rep_kfoldcv = RepeatedKFold(n_splits=5, n_repeats=3, random_state=random_seed)
+#    rep_kfoldcv = RepeatedKFold(n_splits=5, n_repeats=3, random_state=random_seed)
 
-    scores = cross_val_score(pipe,
+    pipe = create_pipeline(use_scaling_for_y=use_scaling_for_y,
+                           data_transformer=data_transformer,
+                           feature_selector=feature_selector,
+                           regressor=voting_regressor)
+    pipe_cv = clone(pipe)
+    scores = cross_val_score(pipe_cv,
                              data_X,
                              data_y,
                              scoring=scorer,
                              cv=kfoldcv,
                              n_jobs=-1)
 
-#    rep_scores = cross_val_score(pipe,
+#    pipe_rep_cv = clone(pipe)
+#    rep_scores = cross_val_score(pipe_rep_cv,
 #                             data_X,
 #                             data_y,
 #                             scoring=scorer,
@@ -263,16 +275,21 @@ def main():
         # -- Remove Outliers --
         if remove_outliers:
             print('Removing Outliers')
-            data_X, data_y = remove_numerical_outliers(data_X, data_y)
+            data_X, data_y = remove_numerical_outliers_iqr(data_X, data_y)
             print('Data (Outliers removed) shape {:} {:}'.format(data_X.shape, data_y.shape))
 
         # -- Fit pipe (Transofrmation and model) on all Train data set --
         print('Fitting on all data')
-        pipe.fit(data_X, data_y)
+        pipe = create_pipeline(use_scaling_for_y=use_scaling_for_y,
+                           data_transformer=data_transformer,
+                           feature_selector=feature_selector,
+                           regressor=voting_regressor)
+        pipe_final = clone(pipe)
+        pipe_final.fit(data_X, data_y)
 
         # -- Predict on Test set --
         print('Predicting on test')
-        test_pred_y = pipe.predict(test_X)
+        test_pred_y = pipe_final.predict(test_X)
 
         # Store test set predictions in DataFrame and save to file
         test_pd = pd.DataFrame()
@@ -288,11 +305,11 @@ def main():
         # done to the data and any other relevent information. Don't forget
         # to add the prediction file itself to the subfolder submissions\pred_files.
         # Also, name the prediction file based on the model, date, git version...
-        test_tosubmit_folder = os.path.join(log_folder,'V24-VotBag10GbrXgbLgbm-NumOutlierRmvd-NoManLikesRemv')
+        test_tosubmit_folder = os.path.join(log_folder,'V26-VotBag10GbrXgbLgbm-NumOutlierIQRRmvd')
         # Create log folder if does not exist
         if not Path(test_tosubmit_folder).exists():
             os.mkdir(test_tosubmit_folder)
-        test_name = 'V24-VotBag10GbrXgbLgbm-NumOutlierRmvd-NoManLikesRemv-RandState42-CoxBoxY-gitvers-xxxx-2020-12-09'
+        test_name = 'V26-VotBag10GbrXgbLgbm-NumOutlierIQRRmvd-RandState42-CoxBoxY-gitvers-xxxx-2020-12-10'
         prediction_file_save_path = os.path.join(test_tosubmit_folder, test_name+'.csv')
         print('\nSaving prediction to "{:}"'.format(prediction_file_save_path))
         test_pd.to_csv(prediction_file_save_path, sep=',', index=False)

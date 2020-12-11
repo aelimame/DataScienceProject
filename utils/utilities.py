@@ -39,6 +39,65 @@ class CustomTargetTransformer(BaseEstimator, TransformerMixin):
         return scaled_target.reshape(-1)
 
 
+
+def handle_outliers(input_df, col_name, remove=True, k=1.5):
+    trans_df = input_df.copy()
+
+    #Impute values rather than drop
+    numerical_imputer = SimpleImputer(strategy = 'median')
+    trans_df[col_name] = numerical_imputer.fit_transform(trans_df[[col_name]])
+    
+    #Scale values before removing outliers
+    numerical_scaler = PowerTransformer(method='box-cox', standardize=False) # RobustScaler()
+    trans_df[col_name] = numerical_scaler.fit_transform(trans_df[[col_name]]+1) # Need +1 for power transformer
+
+    # Compute the IQR
+    Q1 = trans_df[col_name].quantile(0.25)
+    Q3 = trans_df[col_name].quantile(0.75)
+    IQR = Q3 - Q1
+
+    lower_limit = Q1 - k * IQR 
+    upper_limit = Q3 + k * IQR 
+
+    # Remove
+    if remove:
+        outliers = trans_df[((trans_df[col_name] > upper_limit) | (trans_df[col_name] < lower_limit))]
+        print('Droped {:} outilers. Based on column {:}'.format(len(outliers), col_name))
+        input_df = input_df.drop(outliers.index)
+    # Clip ?
+#    else:
+#        df[col_name] = df[col_name].clip(lower_limit, upper_limit)
+
+    return input_df
+
+def remove_numerical_outliers_iqr(train_X, train_y):
+    data = train_X.copy()
+    data['y'] = train_y
+
+    # Outliers removal is based on the following columns
+    numerical_features = ['Num of Followers',
+                        'Num of People Following',
+                        'Num of Status Updates',
+                        'Num of Direct Messages',
+                        'Avg Daily Profile Visit Duration in seconds',
+                        'Avg Daily Profile Clicks',
+                        'Num of Profile Likes']
+
+
+    data = handle_outliers(data, 'Num of Followers', remove=True, k=1.5) # 1.5
+    data = handle_outliers(data, 'Num of People Following', remove=True, k=2.5) # 2.5?
+    data = handle_outliers(data, 'Num of Status Updates', remove=True, k=2) # 2
+    data = handle_outliers(data, 'Num of Direct Messages', remove=True, k=1.5) #1.5
+    #data = handle_outliers(data, 'Avg Daily Profile Visit Duration in seconds', remove=True, k=k) # TODO no outliers?
+    data = handle_outliers(data, 'Avg Daily Profile Clicks', remove=True, k=1.5) #1.5
+    data = handle_outliers(data, 'Num of Profile Likes', remove=True, k=1.5) #1.5
+
+    # Give back same format X, y
+    y = np.array(data['y'])
+    X = data.drop('y', axis=1)
+    
+    return (X, y)
+
 def remove_numerical_outliers(train_X, train_y):
     numerical_features = ['Num of Followers',
                         'Num of People Following',
@@ -130,8 +189,8 @@ def load_x_y_from_loaders(images_loader,
     # TODO outliers removal, should be done outside of the DataTransormer since sklearn
     # does not allow dropping X values (Y and X won't match!)
     # Do it here?
-    if 'Num of Profile Likes' in orig_features:
-       orig_features = orig_features[orig_features['Num of Profile Likes'] < 200000]
+#    if 'Num of Profile Likes' in orig_features:
+#       orig_features = orig_features[orig_features['Num of Profile Likes'] < 200000]
     
     profiles_ids_list = orig_features['Id'].values # Update profiles_ids_list
 

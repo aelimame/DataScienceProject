@@ -5,6 +5,7 @@ import datetime as dt
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder
 from sklearn.preprocessing import StandardScaler, PowerTransformer, QuantileTransformer, RobustScaler, Normalizer
+from sklearn.preprocessing import PolynomialFeatures
 from sklearn.impute import SimpleImputer
 from sklearn.experimental import enable_iterative_imputer 
 from sklearn.impute import IterativeImputer
@@ -312,26 +313,7 @@ class NumericalTransformer( BaseEstimator, TransformerMixin ):
         self._in_feature_names = feature_names
         self._out_feature_names = []
 
-    def handle_outliers(self, df, col_name, lower_limit, upper_limit, remove=False):
-        # Remove
-        if remove:
-            outliers = df[((df[col_name] > upper_limit) | (df[col_name] < lower_limit))]
-            print('Droped {:} outilers. Based on column {:}'.format(len(outliers), col_name))
-            df = df.drop(outliers.index)
-        # Clip ?
-        else:
-            df[col_name] = df[col_name].clip(lower_limit, upper_limit)
-
-        return df
-
     def fit( self, X, y = None ):
-        # TODO if clipping only it is ok to do here, but dropping does not work
-        # since X and y won't match anymore
-        #X = self.handle_outliers( X, 'Avg Daily Profile Clicks', avg_daily_profile_clicks_lower_limit, avg_daily_profile_clicks_upper_limit )
-        #X = self.handle_outliers( X, 'Num of Status Updates',    num_status_updates_lower_limit,       num_status_updates_upper_limit )
-        #X = self.handle_outliers( X, 'Num of Followers',         num_followers_lower_limit,            num_followers_upper_limit )
-        #X = self.handle_outliers( X, 'Num of People Following',  num_people_following_lower_limit,     num_people_following_upper_limit )
-        #X = self.handle_outliers( X, 'Num of Direct Messages',   num_direct_messages_lower_limit,      num_direct_messages_upper_limit )
         return self
 
     def transform( self, X, y = None ):
@@ -403,6 +385,7 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
                                                     # TODO see IterativeImputer()?
                                                     #('imputer', IterativeImputer(initial_strategy = 'median'))#,
                                                     ('imputer', SimpleImputer(strategy = 'median')),
+                                                    #('poly_features', PolynomialFeatures(order = 2)),
                                                     ('num_scaler', RobustScaler())
                                                     #('num_scaler', PowerTransformer(method='box-cox', standardize=True))
                                                   ])
