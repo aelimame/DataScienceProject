@@ -50,9 +50,9 @@ class ColorsTransformer( BaseEstimator, TransformerMixin ):
             return int(two_char_code, 16) / 255
 
         colours_rgb = X[column_name]
-        X[column_name+'_r'] = colours_rgb.apply(lambda colour: parse_color(str(colour)[0:2]) )
-        X[column_name+'_g'] = colours_rgb.apply(lambda colour: parse_color(str(colour)[2:4]) )
-        X[column_name+'_b'] = colours_rgb.apply(lambda colour: parse_color(str(colour)[4:6]) )
+        X[column_name+'_r'] = colours_rgb.apply(lambda colour: parse_color(str(colour)[0:2]) + 1.0) # +1 Need val > 1 For power transform
+        X[column_name+'_g'] = colours_rgb.apply(lambda colour: parse_color(str(colour)[2:4]) + 1.0) # +1 Need val > 1 For power transform
+        X[column_name+'_b'] = colours_rgb.apply(lambda colour: parse_color(str(colour)[4:6]) + 1.0) # +1 Need val > 1 For power transform
         # And features_names
         self._out_feature_names += [column_name+'_r']
         self._out_feature_names += [column_name+'_g']
@@ -319,12 +319,12 @@ class NumericalTransformer( BaseEstimator, TransformerMixin ):
     def transform( self, X, y = None ):
 
         # Don't need to do anything, since the SimpleImputer will handle imputation of missing values
-        X['Avg Daily Profile Visit Duration in seconds'] = X['Avg Daily Profile Visit Duration in seconds']
-        X['Avg Daily Profile Clicks'] = X['Avg Daily Profile Clicks']
-        X['Num of Status Updates']    = X['Num of Status Updates']
-        X['Num of Followers']         = X['Num of Followers']
-        X['Num of People Following']  = X['Num of People Following']
-        X['Num of Direct Messages']   = X['Num of Direct Messages']
+        X['Avg Daily Profile Visit Duration in seconds'] = X['Avg Daily Profile Visit Duration in seconds'] + 1 # +1 Need val > 1 For power transformer
+        X['Avg Daily Profile Clicks'] = X['Avg Daily Profile Clicks'] + 1 # +1 Need val > 1 For power transformer
+        X['Num of Status Updates']    = X['Num of Status Updates'] + 1 # +1 Need val > 1 For power transformer
+        X['Num of Followers']         = X['Num of Followers'] + 1 # +1 Need val > 1 For power transformer
+        X['Num of People Following']  = X['Num of People Following'] + 1 # +1 Need val > 1 For power transformer
+        X['Num of Direct Messages']   = X['Num of Direct Messages'] + 1 # +1 Need val > 1 For power transformer
 
         # Fill _out_feature_names (same as _feature_names here?)
         self._out_feature_names = self._in_feature_names
@@ -382,12 +382,12 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
                                   'Avg Daily Profile Visit Duration in seconds', 
                                   'Avg Daily Profile Clicks']
             numerical_pipeline = Pipeline(steps = [('num_transformer', NumericalTransformer(numerical_features)),
-                                                    # TODO see IterativeImputer()?
-                                                    #('imputer', IterativeImputer(initial_strategy = 'median'))#,
+                                                    #('imputer', IterativeImputer(initial_strategy = 'median')),
                                                     ('imputer', SimpleImputer(strategy = 'median')),
-                                                    #('poly_features', PolynomialFeatures(order = 2)),
-                                                    ('num_scaler', RobustScaler())
-                                                    #('num_scaler', PowerTransformer(method='box-cox', standardize=True))
+                                                    #('num_scaler', RobustScaler()),
+                                                    ('num_scaler', PowerTransformer(method='box-cox', standardize=True)),
+                                                    ('num2_scaler', QuantileTransformer(output_distribution='uniform'))
+                                                    #('poly_features', PolynomialFeatures(order = 1, include_bias = False)),
                                                   ])
 
         # Color features and pipeline
@@ -395,7 +395,9 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
             color_features = ['Profile Text Color',
                               'Profile Page Color',
                               'Profile Theme Color']
-            colors_pipeline = Pipeline(steps = [('colors_transformer', ColorsTransformer(color_features))])
+            colors_pipeline = Pipeline(steps = [('colors_transformer', ColorsTransformer(color_features)),
+                                                ('colors_scaler', PowerTransformer(method='box-cox', standardize=True))
+                                               ])
 
         # Textual features and pipeline
         if self.enable_textual_features:
@@ -407,7 +409,9 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
             categorical_features = ['Profile Verification Status',
                                     'Profile Category']
             categorical_pipeline = Pipeline(steps = [('cat_transformer', CategoricalTransformer(categorical_features)),
-                                                     ('cat_one_hot_encoder', OneHotEncoder(sparse = False))
+                                                     #('cat_one_hot_encoder', OneHotEncoder(sparse = False))
+                                                     ('cat_ordinal_encoder', OrdinalEncoder()),
+                                                     ('num_scaler', RobustScaler())
                                                     ])
 
         # Date features and pipeline
@@ -422,7 +426,9 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
             language_features = ['User Language']
             language_pipeline = Pipeline(steps = [('languages_transformer', LanguagesTransformer(language_features,
                                                                                                  self.num_languages_to_featureize)),
-                                                  ('lang_one_hot_encoder', OneHotEncoder(sparse = False))
+                                                  #('lang_one_hot_encoder', OneHotEncoder(sparse = False))
+                                                  ('lang_ordinal_encoder', OrdinalEncoder()),
+                                                  ('num_scaler', RobustScaler())
                                                  ])
 
         # Location advanced features and pipeline
@@ -432,7 +438,9 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
             location_adv_transformer = Pipeline(steps = [('location_advanced_transformer', LocationAdvancedTransformer(location_adv_features,
                                                                                                                        self.num_tzones_to_featureize,
                                                                                                                        self.num_utc_to_featureize)),
-                                                         ('loc_adv_one_hot_encoder', OneHotEncoder(sparse = False))
+                                                         #('loc_adv_one_hot_encoder', OneHotEncoder(sparse = False))
+                                                         ('loc_adv_ordinal_encoder', OrdinalEncoder()),
+                                                         ('num_scaler', RobustScaler())
                                                         ])
 
         # Combining numerical and categorical piepline into one full big pipeline horizontally
