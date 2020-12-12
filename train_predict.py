@@ -313,11 +313,11 @@ def main():
         # done to the data and any other relevent information. Don't forget
         # to add the prediction file itself to the subfolder submissions\pred_files.
         # Also, name the prediction file based on the model, date, git version...
-        test_tosubmit_folder = os.path.join(log_folder,'V29-VotBag10GbrXgbLgbm-OutlierRemSVM-RobSclr')
+        test_tosubmit_folder = os.path.join(log_folder,'V30-VotBag10GbrXgbLgbm-OutlierRemSVM-Onehot')
         # Create log folder if does not exist
         if not Path(test_tosubmit_folder).exists():
             os.mkdir(test_tosubmit_folder)
-        test_name = 'V29-VotBag10GbrXgbLgbm-OutlierRemSVM-RobSclr-RanSta42-CoxBoxY-gitvers-xxxx-2020-12-11'
+        test_name = 'V30-VotBag10GbrXgbLgbm-OutlierRemSVM-Onehot-RanSta42-CoxBoxY-gitvers-xxxx-2020-12-12'
         prediction_file_save_path = os.path.join(test_tosubmit_folder, test_name+'.csv')
         print('\nSaving prediction to "{:}"'.format(prediction_file_save_path))
         test_pd.to_csv(prediction_file_save_path, sep=',', index=False)

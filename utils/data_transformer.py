@@ -398,9 +398,9 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
             categorical_features = ['Profile Verification Status',
                                     'Profile Category']
             categorical_pipeline = Pipeline(steps = [('cat_transformer', CategoricalTransformer(categorical_features)),
-                                                     #('cat_one_hot_encoder', OneHotEncoder(sparse = False))
-                                                     ('cat_ordinal_encoder', OrdinalEncoder()),
-                                                     ('num_scaler', RobustScaler())
+                                                     ('cat_one_hot_encoder', OneHotEncoder(sparse = False))
+                                                     #('cat_ordinal_encoder', OrdinalEncoder()),
+                                                     #('num_scaler', RobustScaler())
                                                     ])
 
         # Date features and pipeline
@@ -415,9 +415,9 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
             language_features = ['User Language']
             language_pipeline = Pipeline(steps = [('languages_transformer', LanguagesTransformer(language_features,
                                                                                                  self.num_languages_to_featureize)),
-                                                  #('lang_one_hot_encoder', OneHotEncoder(sparse = False))
-                                                  ('lang_ordinal_encoder', OrdinalEncoder()),
-                                                  ('num_scaler', RobustScaler())
+                                                  ('lang_one_hot_encoder', OneHotEncoder(sparse = False))
+                                                  #('lang_ordinal_encoder', OrdinalEncoder()),
+                                                  #('num_scaler', RobustScaler())
                                                  ])
 
         # Location advanced features and pipeline
@@ -427,9 +427,9 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
             location_adv_transformer = Pipeline(steps = [('location_advanced_transformer', LocationAdvancedTransformer(location_adv_features,
                                                                                                                        self.num_tzones_to_featureize,
                                                                                                                        self.num_utc_to_featureize)),
-                                                         #('loc_adv_one_hot_encoder', OneHotEncoder(sparse = False))
-                                                         ('loc_adv_ordinal_encoder', OrdinalEncoder()),
-                                                         ('num_scaler', RobustScaler())
+                                                         ('loc_adv_one_hot_encoder', OneHotEncoder(sparse = False))
+                                                         #('loc_adv_ordinal_encoder', OrdinalEncoder()),
+                                                         #('num_scaler', RobustScaler())
                                                         ])
 
         # Combining numerical and categorical piepline into one full big pipeline horizontally
