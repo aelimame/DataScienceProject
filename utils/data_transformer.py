@@ -30,20 +30,7 @@ DEFAULT_NUM_LANGUAGES_TO_FEATUREIZE = 9
 DEFAULT_NUM_USR_TZONES_TO_FEATUREIZE = 10
 DEFAULT_NUM_UTC_TO_FEATUREIZE = 15
 UTC_FOR_NA_VALUES = 10000000 # Define high value to give unique category to nan values
-
-# TODO Hardcoded outliers limits (Based on manuel data analysis for the moment)
-mum_profile_likes_upper_limit = 200000
-num_followers_lower_limit = 0
-num_followers_upper_limit = 45000000
-num_people_following_lower_limit = 0
-num_people_following_upper_limit = 550000
-num_status_updates_lower_limit = 0
-num_status_updates_upper_limit = 1500000
-num_direct_messages_lower_limit = 0
-num_direct_messages_upper_limit=75000
-avg_daily_profile_clicks_lower_limit = 0
-avg_daily_profile_clicks_upper_limit = 17
-
+N_DECIMALS = 7
 
 
 # Custom Transformer that modifies colour columns
@@ -328,12 +315,7 @@ class NumericalTransformer( BaseEstimator, TransformerMixin ):
     def transform( self, X, y = None ):
 
         # Don't need to do anything, since the SimpleImputer will handle imputation of missing values
-        X['Avg Daily Profile Visit Duration in seconds'] = X['Avg Daily Profile Visit Duration in seconds']
-        X['Avg Daily Profile Clicks'] = X['Avg Daily Profile Clicks']
-        X['Num of Status Updates']    = X['Num of Status Updates']
-        X['Num of Followers']         = X['Num of Followers']
-        X['Num of People Following']  = X['Num of People Following']
-        X['Num of Direct Messages']   = X['Num of Direct Messages']
+        X[self._in_feature_names] = X[self._in_feature_names].astype(np.float64)#.round(N_DECIMALS)
 
         # Fill _out_feature_names (same as _feature_names here?)
         self._out_feature_names = self._in_feature_names

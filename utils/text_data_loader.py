@@ -43,7 +43,7 @@ class TextDataLoader():
 
 
     def _load_text_data_from_file(self):
-        self.orig_data = pd.read_csv(self.src_csv_file_path)
+        self.orig_data = pd.read_csv(self.src_csv_file_path, encoding='utf8')
         self.is_data_loaded = True
 
  

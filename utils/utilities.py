@@ -23,13 +23,15 @@ from sklearn.neighbors import LocalOutlierFactor
 from sklearn.preprocessing import RobustScaler
 from sklearn.svm import OneClassSVM
 
+N_DECIMALS = 7
+
 # A custom Y transformer
 class CustomTargetTransformer(BaseEstimator, TransformerMixin):
     def __init__(self):
         self.power_transformer = PowerTransformer(method='box-cox', standardize=False)
 
     def fit(self, target):
-        self.power_transformer.fit((target + 1).reshape(-1, 1))
+        self.power_transformer.fit((target.astype(np.float64) + 1).reshape(-1, 1))
         return self
 
     def transform(self, target):
@@ -71,7 +73,7 @@ def handle_outliers(input_df, col_name, remove=True, k=1.5):
     # Remove
     if remove:
         outliers = trans_df[((trans_df[col_name] > upper_limit) | (trans_df[col_name] < lower_limit))]
-        print('Droped {:} outilers. Based on column {:}'.format(len(outliers), col_name))
+        print('Droped {:} outilers. Based on column {:}. Lower: {:}. Upper: {:}'.format(len(outliers), col_name, lower_limit, upper_limit))
         input_df = input_df.drop(outliers.index)
     # Clip ?
 #    else:
@@ -80,8 +82,6 @@ def handle_outliers(input_df, col_name, remove=True, k=1.5):
     return input_df
 
 def remove_numerical_outliers_iqr(train_X, train_y):
-    data = train_X.copy()
-    data['y'] = train_y
 
     # Outliers removal is based on the following columns
     numerical_features = ['Num of Followers',
@@ -92,6 +92,9 @@ def remove_numerical_outliers_iqr(train_X, train_y):
                         'Avg Daily Profile Clicks',
                         'Num of Profile Likes']
 
+    data = train_X.copy()
+    data[numerical_features] = data[numerical_features].astype(np.float64)#.round(N_DECIMALS)
+    data['y'] = train_y
 
     data = handle_outliers(data, 'Num of Followers', remove=True, k=1.5) # 1.5
     data = handle_outliers(data, 'Num of People Following', remove=True, k=2.5) # 2.5?
@@ -115,6 +118,9 @@ def remove_numerical_outliers(train_X, train_y):
                         'Avg Daily Profile Visit Duration in seconds',
                         'Avg Daily Profile Clicks',
                         'Num of Profile Likes']
+
+    train_X_numerical = train_X.copy()
+    train_X_numerical[numerical_features] = train_X_numerical[numerical_features].astype(np.float64)#.round(N_DECIMALS)
 
     #Impute values rather than drop
     numerical_imputer = SimpleImputer(strategy = 'median')
