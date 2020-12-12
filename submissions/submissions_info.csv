@@ -27,3 +27,4 @@ v24, 09-12-2020,bb2e3fb8dead1e173de1ab4cc22040f8ca98662d,"Same as v23(VotBag10Gb
 v25, 09-12-2020,94fc6adff6e14ad4e53309a6666ad4180128f665,"Similar to v22 Outliers removal (And we manually remove Likes over 200K) VotBag 150 GbrXgbLgbm", 1.70923, 1.6994459518
 v26, 10-12-2020,8d1bc12d05f649f10e79d93ddaf41d2792b498a4,"Similar to v22 but Outliers removal IQR", 1.71056, 1.7078990152 
 v27, 11-12-2020,396524b172ae2325d1f4a3fb7687329fe042d14c,"VotBag 25 GbrXgbLgb + OrdinalEncoder instead of OneHot + OutliersRemove OneClassSVM + manually remove Likes over 200K", 1.71493, 1.7004414729
+v28, 11-12-2020,a972a5caa2888a40779045b62a5fad23b8da775a,"VotBag 25 GbrXgbLgb + OrdinalEncoder instead of OneHot + RobustScaler for num features + NO outliers removed + manually remove Likes over 200K", 1.71954, 1.6992719233
