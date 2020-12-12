@@ -1,6 +1,15 @@
-from time import strptime
+# General imports
 import numpy as np
+import random
 import pandas as pd
+import os
+# Fix random seeds, Same one to be used everywhere
+random_seed = 42
+os.environ['PYTHONHASHSEED']=str(random_seed)
+np.random.seed(random_seed)
+random.seed(random_seed)
+
+from time import strptime
 import datetime as dt
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder
@@ -50,9 +59,9 @@ class ColorsTransformer( BaseEstimator, TransformerMixin ):
             return int(two_char_code, 16) / 255
 
         colours_rgb = X[column_name]
-        X[column_name+'_r'] = colours_rgb.apply(lambda colour: parse_color(str(colour)[0:2]) + 1.0) # +1 Need val > 1 For power transform
-        X[column_name+'_g'] = colours_rgb.apply(lambda colour: parse_color(str(colour)[2:4]) + 1.0) # +1 Need val > 1 For power transform
-        X[column_name+'_b'] = colours_rgb.apply(lambda colour: parse_color(str(colour)[4:6]) + 1.0) # +1 Need val > 1 For power transform
+        X[column_name+'_r'] = colours_rgb.apply(lambda colour: parse_color(str(colour)[0:2]) )
+        X[column_name+'_g'] = colours_rgb.apply(lambda colour: parse_color(str(colour)[2:4]) )
+        X[column_name+'_b'] = colours_rgb.apply(lambda colour: parse_color(str(colour)[4:6]) )
         # And features_names
         self._out_feature_names += [column_name+'_r']
         self._out_feature_names += [column_name+'_g']
@@ -257,15 +266,15 @@ class BinaryTransformer( BaseEstimator, TransformerMixin ):
         X = X.copy()
 
         X['Is Profile View Size Customized?'].fillna(False, inplace=True)
-        X['Is Profile View Size Customized?'] = X['Is Profile View Size Customized?'].astype(bool)
+        X['Is Profile View Size Customized?'] = X['Is Profile View Size Customized?'].astype(bool).astype(int)
 
         X['Profile Cover Image Status'].fillna('Not set', inplace=True)
-        X['Profile Cover Image Status'] = X['Profile Cover Image Status'].apply(lambda strVal: (str(strVal).lower() == 'set') )
+        X['Profile Cover Image Status'] = X['Profile Cover Image Status'].apply(lambda strVal: (str(strVal).lower() == 'set') ).astype(bool).astype(int)
 
         # X['Has Location'] = self.df['Location'].apply(lambda location: False if pd.isnull(location) else True )
         # TODO: Use geocoding results to add more info?
         #X.drop('Location', axis=1, inplace=True)
-        X['Has Location'] = X['Location'].apply(lambda location: False if pd.isnull(location) else True )
+        X['Has Location'] = X['Location'].apply(lambda location: False if pd.isnull(location) else True ).astype(bool).astype(int)
 
         # This column uses "Enabled" and "Disabled" (and "??") rather than "True" and "False"
         X['Location Public Visibility'] = X['Location Public Visibility'].apply(lambda strVal: str(strVal).lower() == 'enabled' ).astype(bool).astype(int)
@@ -319,12 +328,12 @@ class NumericalTransformer( BaseEstimator, TransformerMixin ):
     def transform( self, X, y = None ):
 
         # Don't need to do anything, since the SimpleImputer will handle imputation of missing values
-        X['Avg Daily Profile Visit Duration in seconds'] = X['Avg Daily Profile Visit Duration in seconds'] + 1 # +1 Need val > 1 For power transformer
-        X['Avg Daily Profile Clicks'] = X['Avg Daily Profile Clicks'] + 1 # +1 Need val > 1 For power transformer
-        X['Num of Status Updates']    = X['Num of Status Updates'] + 1 # +1 Need val > 1 For power transformer
-        X['Num of Followers']         = X['Num of Followers'] + 1 # +1 Need val > 1 For power transformer
-        X['Num of People Following']  = X['Num of People Following'] + 1 # +1 Need val > 1 For power transformer
-        X['Num of Direct Messages']   = X['Num of Direct Messages'] + 1 # +1 Need val > 1 For power transformer
+        X['Avg Daily Profile Visit Duration in seconds'] = X['Avg Daily Profile Visit Duration in seconds']
+        X['Avg Daily Profile Clicks'] = X['Avg Daily Profile Clicks']
+        X['Num of Status Updates']    = X['Num of Status Updates']
+        X['Num of Followers']         = X['Num of Followers']
+        X['Num of People Following']  = X['Num of People Following']
+        X['Num of Direct Messages']   = X['Num of Direct Messages']
 
         # Fill _out_feature_names (same as _feature_names here?)
         self._out_feature_names = self._in_feature_names
@@ -384,9 +393,9 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
             numerical_pipeline = Pipeline(steps = [('num_transformer', NumericalTransformer(numerical_features)),
                                                     #('imputer', IterativeImputer(initial_strategy = 'median')),
                                                     ('imputer', SimpleImputer(strategy = 'median')),
-                                                    #('num_scaler', RobustScaler()),
-                                                    ('num_scaler', PowerTransformer(method='box-cox', standardize=True)),
-                                                    ('num2_scaler', QuantileTransformer(output_distribution='uniform'))
+                                                    ('num_scaler', RobustScaler())
+                                                    #('num_scaler', PowerTransformer(method='box-cox', standardize=True))
+                                                    #('num2_scaler', QuantileTransformer(output_distribution='uniform'))
                                                     #('poly_features', PolynomialFeatures(order = 1, include_bias = False)),
                                                   ])
 
@@ -395,9 +404,7 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
             color_features = ['Profile Text Color',
                               'Profile Page Color',
                               'Profile Theme Color']
-            colors_pipeline = Pipeline(steps = [('colors_transformer', ColorsTransformer(color_features)),
-                                                ('colors_scaler', PowerTransformer(method='box-cox', standardize=True))
-                                               ])
+            colors_pipeline = Pipeline(steps = [('colors_transformer', ColorsTransformer(color_features))])
 
         # Textual features and pipeline
         if self.enable_textual_features:

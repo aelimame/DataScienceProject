@@ -1,7 +1,16 @@
+# General imports
+import numpy as np
+import random
+import pandas as pd
+import os
+# Fix random seeds, Same one to be used everywhere
+random_seed = 42
+os.environ['PYTHONHASHSEED']=str(random_seed)
+np.random.seed(random_seed)
+random.seed(random_seed)
+
 import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_log_error
-import numpy as np
-import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.compose import TransformedTargetRegressor
 from sklearn.preprocessing import StandardScaler, PowerTransformer, QuantileTransformer, RobustScaler, Normalizer
@@ -106,7 +115,7 @@ def remove_numerical_outliers(train_X, train_y):
                         'Avg Daily Profile Visit Duration in seconds',
                         'Avg Daily Profile Clicks',
                         'Num of Profile Likes']
-    
+
     #Impute values rather than drop
     numerical_imputer = SimpleImputer(strategy = 'median')
     train_X_numerical = numerical_imputer.fit_transform( train_X[numerical_features] )

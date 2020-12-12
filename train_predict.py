@@ -1,17 +1,21 @@
 # General imports
-#import cv2
-
-#### FOR MAC OSX USERS
-import matplotlib
-matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
-
 import numpy as np
+import random
 import pandas as pd
 import pydot
 import os
 from pathlib import Path
 from operator import itemgetter
+# Fix random seeds, Same one to be used everywhere
+random_seed = 42
+os.environ['PYTHONHASHSEED']=str(random_seed)
+np.random.seed(random_seed)
+random.seed(random_seed)
+
+#### FOR MAC OSX USERS
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
 
 import xgboost as xgb
 
@@ -43,10 +47,9 @@ OUTPUT_NAME = 'likes'
 # params
 use_scaling_for_y = True
 include_images = False
-remove_outliers = True
-random_seed = 42
+remove_outliers = False
 
-# Change this generate a prediction on test
+# Change this to generate a prediction on test
 predict_on_test = True
 
 # data paths
@@ -141,7 +144,7 @@ def main():
                                     min_samples_split=3,
                                     min_samples_leaf=6,
                                     random_state=random_seed)
-    bagging_gbr = BaggingRegressor(base_estimator=gbr_model, n_estimators=25, random_state=random_seed)
+    bagging_gbr = BaggingRegressor(base_estimator=gbr_model, n_estimators=25, random_state=random_seed, warm_start=False)
 
     # xgboost
     #'regressor__votingregressor__BagXgb__base_estimator__n_estimators': 200,
@@ -159,7 +162,7 @@ def main():
                                 min_child_weight = 1,
                                 subsample = 0.8,
                                 random_state=random_seed)
-    bagging_xgb = BaggingRegressor(base_estimator=xgb_model, n_estimators=25, random_state=random_seed)
+    bagging_xgb = BaggingRegressor(base_estimator=xgb_model, n_estimators=25, random_state=random_seed, warm_start=False)
 
     # Lightgbm
     # RandSearchCV params
@@ -176,7 +179,7 @@ def main():
                             colsample_bytree = 1.0,
                             subsample = 0.8,
                             random_state=random_seed)
-    bagging_gbm = BaggingRegressor(base_estimator=gbm, n_estimators=25, random_state=random_seed)
+    bagging_gbm = BaggingRegressor(base_estimator=gbm, n_estimators=25, random_state=random_seed, warm_start=False)
 
     #Voting regressor
     voting_regressor = VotingRegressor([('BagGbr', bagging_gbr),
@@ -204,10 +207,6 @@ def main():
             train_X, train_y = remove_numerical_outliers(train_X, train_y)
 
             # Evaluate/train pipe/models defined above using the "cleaned" train and valid sets
-            pipe = create_pipeline(use_scaling_for_y=use_scaling_for_y,
-                           data_transformer=data_transformer,
-                           feature_selector=feature_selector,
-                           regressor=voting_regressor)
             pipe_outliers = clone(pipe)
             pipe_outliers.fit(train_X, train_y)
             valid_pred_y = pipe_outliers.predict(valid_X)
@@ -225,10 +224,6 @@ def main():
     kfoldcv = KFold(n_splits=5, random_state=random_seed, shuffle=True)
 #    rep_kfoldcv = RepeatedKFold(n_splits=5, n_repeats=3, random_state=random_seed)
 
-    pipe = create_pipeline(use_scaling_for_y=use_scaling_for_y,
-                           data_transformer=data_transformer,
-                           feature_selector=feature_selector,
-                           regressor=voting_regressor)
     pipe_cv = clone(pipe)
     scores = cross_val_score(pipe_cv,
                              data_X,
@@ -257,6 +252,18 @@ def main():
     if predict_on_test:
         print('\n\nPredicting on Test data')
 
+        # Reload data X/y
+        data_final_X, data_final_y = load_x_y_from_loaders(images_loader=images_loader,
+                                        text_data_loader=text_data_loader,
+                                        image_input_name=IMAGE_INPUT_NAME,
+                                        text_features_input_name=TEXT_FEATURES_INPUT_NAME,
+                                        output_name=OUTPUT_NAME,
+                                        profiles_ids_list=None, # Load all profiles in data
+                                        include_images=include_images)
+        # No Need for dict for the moment
+        data_final_X = data_final_X[TEXT_FEATURES_INPUT_NAME]
+        data_final_y = data_final_y[OUTPUT_NAME]
+
         # -- Preare Test data  X, y --
         test_profiles_ids_list = test_text_data_loader.get_orig_features()['Id'].values
         test_X = load_x_y_from_loaders(images_loader=test_images_loader,
@@ -275,17 +282,13 @@ def main():
         # -- Remove Outliers --
         if remove_outliers:
             print('Removing Outliers')
-            data_X, data_y = remove_numerical_outliers(data_X, data_y)
-            print('Data (Outliers removed) shape {:} {:}'.format(data_X.shape, data_y.shape))
+            data_final_X, data_final_y = remove_numerical_outliers(data_final_X, data_final_y)
+            print('Data (Outliers removed) shape {:} {:}'.format(data_final_X.shape, data_final_y.shape))
 
         # -- Fit pipe (Transofrmation and model) on all Train data set --
         print('Fitting on all data')
-        pipe = create_pipeline(use_scaling_for_y=use_scaling_for_y,
-                           data_transformer=data_transformer,
-                           feature_selector=feature_selector,
-                           regressor=voting_regressor)
         pipe_final = clone(pipe)
-        pipe_final.fit(data_X, data_y)
+        pipe_final.fit(data_final_X, data_final_y)
 
         # -- Predict on Test set --
         print('Predicting on test')
@@ -305,11 +308,11 @@ def main():
         # done to the data and any other relevent information. Don't forget
         # to add the prediction file itself to the subfolder submissions\pred_files.
         # Also, name the prediction file based on the model, date, git version...
-        test_tosubmit_folder = os.path.join(log_folder,'V27-VotBag25GbrXgbLgbm-NumOutlierOneClassSVM')
+        test_tosubmit_folder = os.path.join(log_folder,'V28-VotBag25GbrXgbLgbm-NOOutlierRem-RobSclr')
         # Create log folder if does not exist
         if not Path(test_tosubmit_folder).exists():
             os.mkdir(test_tosubmit_folder)
-        test_name = 'V27-VotBag25GbrXgbLgbm-NumOutlierOneClassSVM-RanSta42-CoxBoxY-gitvers-xxxx-2020-12-11'
+        test_name = 'V28-VotBag25GbrXgbLgbm-NOOutlierRem-RobSclr-RanSta42-CoxBoxY-gitvers-xxxx-2020-12-11'
         prediction_file_save_path = os.path.join(test_tosubmit_folder, test_name+'.csv')
         print('\nSaving prediction to "{:}"'.format(prediction_file_save_path))
         test_pd.to_csv(prediction_file_save_path, sep=',', index=False)
