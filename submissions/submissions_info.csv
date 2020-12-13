@@ -35,4 +35,4 @@ v32,12-12-2020,3c421644965386e1a5c53bb9c3e2e7ea633eaf93,Same as V30 but Outliers
 v33,12-12-2020,956b1d24034a736f6c13650cb42e3ee838e22744,same as V32 but NumFeatures PowerTransform instead of RobustScaler,1.70710,1.7015404894
 v34,,,,,
 v35,,,,,
-v36,13-12-2020,,"Same as V35 but bumped number of languages to 16 and added 4 new features based on [ 'Num of Followers’, 'Num of People Following',   'Num of Status Updates', 'Num of Direct Messages’] each divided by account age",,1.6967218889
+v36,13-12-2020,39a3ec3e8702e0655a25bd8f1c40899b249fe259,"Same as V35 but bumped number of languages to 16 and added 4 new features based on [ 'Num of Followers’, 'Num of People Following',   'Num of Status Updates', 'Num of Direct Messages’] each divided by account age",1.70430,1.6967218889
