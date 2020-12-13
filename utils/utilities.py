@@ -127,8 +127,8 @@ def remove_numerical_outliers(train_X, train_y):
     train_X_numerical = numerical_imputer.fit_transform( train_X[numerical_features] )
     
     #Scale values before removing outliers
-    numerical_scaler = RobustScaler() #TODO try PowerTransformer(method='box-cox', standardize=False)
-    train_X_numerical = numerical_scaler.fit_transform(train_X_numerical) # Need +1 for power transformer
+    numerical_scaler = PowerTransformer(method='box-cox', standardize=False) #RobustScaler()
+    train_X_numerical = numerical_scaler.fit_transform(train_X_numerical+1) # Need +1 for PowerTransformer
 
     #outliers_remover = IsolationForest(contamination='auto', random_state = random_seed, n_jobs=-1) # 1.709 (0.051)
     #outliers_remover = LocalOutlierFactor(contamination='auto', n_neighbors = 20, leaf_size = 30, n_jobs=-1) #1.706 (0.045)
