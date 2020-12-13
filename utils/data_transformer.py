@@ -315,7 +315,7 @@ class NumericalTransformer( BaseEstimator, TransformerMixin ):
     def transform( self, X, y = None ):
 
         # Don't need to do anything, since the SimpleImputer will handle imputation of missing values
-        X[self._in_feature_names] = X[self._in_feature_names].astype(np.float64)#.round(N_DECIMALS)
+        X[self._in_feature_names] = X[self._in_feature_names].astype(np.float64) + 1 #.round(N_DECIMALS)
 
         # Fill _out_feature_names (same as _feature_names here?)
         self._out_feature_names = self._in_feature_names
@@ -375,8 +375,8 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
             numerical_pipeline = Pipeline(steps = [('num_transformer', NumericalTransformer(numerical_features)),
                                                     #('imputer', IterativeImputer(initial_strategy = 'median')),
                                                     ('imputer', SimpleImputer(strategy = 'median')),
-                                                    ('num_scaler', RobustScaler())
-                                                    #('num_scaler', PowerTransformer(method='box-cox', standardize=True))
+                                                    #('num_scaler', RobustScaler())
+                                                    ('num_scaler', PowerTransformer(method='box-cox', standardize=True))
                                                     #('num2_scaler', QuantileTransformer(output_distribution='uniform'))
                                                     #('poly_features', PolynomialFeatures(order = 1, include_bias = False)),
                                                   ])
