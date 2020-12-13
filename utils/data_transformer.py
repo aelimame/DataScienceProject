@@ -26,7 +26,7 @@ from utils.missing_values_filler import MissingValuesFiller
 mvf = MissingValuesFiller()
 
 ACCOUNT_AGE_SINCE_DATE = dt.datetime(2021, 1, 1) # Jan 1st, 2021 is the date we measure account "age" from
-DEFAULT_NUM_LANGUAGES_TO_FEATUREIZE = 9
+DEFAULT_NUM_LANGUAGES_TO_FEATUREIZE = 16
 DEFAULT_NUM_USR_TZONES_TO_FEATUREIZE = 10
 DEFAULT_NUM_UTC_TO_FEATUREIZE = 15
 UTC_FOR_NA_VALUES = 10000000 # Define high value to give unique category to nan values
@@ -68,6 +68,7 @@ class ColorsTransformer( BaseEstimator, TransformerMixin ):
         for column_name in self._in_feature_names:
             X = self.split_colour_column(X, column_name)
             #X.drop(column_name, axis=1, inplace=True)
+            
         X = X[self._out_feature_names].values
         return X
 
@@ -313,6 +314,7 @@ class NumericalTransformer( BaseEstimator, TransformerMixin ):
         return self
 
     def transform( self, X, y = None ):
+        X = X.copy()
 
         # Don't need to do anything, since the SimpleImputer will handle imputation of missing values
         X[self._in_feature_names] = X[self._in_feature_names].astype(np.float64) + 1 #.round(N_DECIMALS)
@@ -320,8 +322,38 @@ class NumericalTransformer( BaseEstimator, TransformerMixin ):
         # Fill _out_feature_names (same as _feature_names here?)
         self._out_feature_names = self._in_feature_names
 
-        return X[self._out_feature_names].values
+        # Our dates come in the format:
+        # Wed Jul 20 07:46:18 +0000 2011
+        def days_since_fixed_date(datetime_str):
+            dt_split = datetime_str.split(' ')
 
+            year = int(dt_split[5])
+            month = strptime(dt_split[1],'%b').tm_mon
+            day = int(dt_split[2])
+
+            times = dt_split[3].split(':')
+            hour = int(times[0])
+            mins = int(times[1])
+            secs = int(times[2])
+
+            thedate = dt.datetime(year, month, day, hour, mins, secs)
+            difference = ACCOUNT_AGE_SINCE_DATE - thedate
+            return difference.total_seconds() / dt.timedelta(days=1).total_seconds()
+
+        X['Account Age Days'] = X['Profile Creation Timestamp'].apply(lambda x: days_since_fixed_date(x) )
+        
+        numerical_features_to_avg = [ 'Num of Followers', 
+                                      'Num of People Following', 
+                                      'Num of Status Updates',
+                                      'Num of Direct Messages']
+
+        feature_names_to_return = self._out_feature_names.copy()
+        
+        for feature in numerical_features_to_avg:
+            feature_names_to_return.append(feature+'_DAILY')
+            X[feature+'_DAILY'] = X[feature] / X['Account Age Days']
+
+        return X[feature_names_to_return].values
 
 # HAL9001DataTransformer: Wrapper to call all the transfomers
 class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
@@ -372,6 +404,7 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
                                   'Num of Direct Messages', 
                                   'Avg Daily Profile Visit Duration in seconds', 
                                   'Avg Daily Profile Clicks']
+
             numerical_pipeline = Pipeline(steps = [('num_transformer', NumericalTransformer(numerical_features)),
                                                     #('imputer', IterativeImputer(initial_strategy = 'median')),
                                                     ('imputer', SimpleImputer(strategy = 'median')),
@@ -436,6 +469,9 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
         # using FeatureUnion
         transformer_list = []
 
+        if self.enable_datetime_features:
+            transformer_list += [('datetime_pipleline', datetime_pipleline)]
+
         if self.enable_binary_features:
             transformer_list += [('binary_pipeline', binary_pipeline)]
 
@@ -450,9 +486,6 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
 
         if self.enable_categorical_features:
             transformer_list += [('categorical_pipeline', categorical_pipeline)]
-
-        if self.enable_datetime_features:
-            transformer_list += [('datetime_pipleline', datetime_pipleline)]
 
         if self.num_languages_to_featureize != 0:
             transformer_list += [('language_pipeline', language_pipeline)]
