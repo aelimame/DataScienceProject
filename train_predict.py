@@ -49,8 +49,12 @@ use_scaling_for_y = True
 include_images = False
 remove_outliers = True
 
+num_bagging_estimators = 20
+
+num_languages_to_featureize = 16
+
 # Change this to generate a prediction on test
-predict_on_test = True
+predict_on_test = False
 
 # data paths
 train_text_path = r'./src_data/train.csv'
@@ -104,7 +108,7 @@ def main():
                                               enable_textual_features = True,
                                               enable_categorical_features = True,
                                               enable_datetime_features = True,
-                                              num_languages_to_featureize = 9, # Default 9
+                                              num_languages_to_featureize = num_languages_to_featureize, # Default 9
                                               num_tzones_to_featureize = 10, # Default 10
                                               num_utc_to_featureize = 15) # Default 15
 
@@ -144,7 +148,7 @@ def main():
                                     min_samples_split=3,
                                     min_samples_leaf=6,
                                     random_state=random_seed)
-    bagging_gbr = BaggingRegressor(base_estimator=gbr_model, n_estimators=25, random_state=random_seed, warm_start=False)
+    bagging_gbr = BaggingRegressor(base_estimator=gbr_model, n_estimators=num_bagging_estimators, random_state=random_seed, warm_start=False)
 
     # xgboost
     #'regressor__votingregressor__BagXgb__base_estimator__n_estimators': 200,
@@ -162,7 +166,7 @@ def main():
                                 min_child_weight = 1,
                                 subsample = 0.8,
                                 random_state=random_seed)
-    bagging_xgb = BaggingRegressor(base_estimator=xgb_model, n_estimators=25, random_state=random_seed, warm_start=False)
+    bagging_xgb = BaggingRegressor(base_estimator=xgb_model, n_estimators=num_bagging_estimators, random_state=random_seed, warm_start=False)
 
     # Lightgbm
     # RandSearchCV params
@@ -179,7 +183,7 @@ def main():
                             colsample_bytree = 1.0,
                             subsample = 0.8,
                             random_state=random_seed)
-    bagging_gbm = BaggingRegressor(base_estimator=gbm, n_estimators=25, random_state=random_seed, warm_start=False)
+    bagging_gbm = BaggingRegressor(base_estimator=gbm, n_estimators=num_bagging_estimators, random_state=random_seed, warm_start=False)
 
     #Voting regressor
     voting_regressor = VotingRegressor([('BagGbr', bagging_gbr),
@@ -313,11 +317,11 @@ def main():
         # done to the data and any other relevent information. Don't forget
         # to add the prediction file itself to the subfolder submissions\pred_files.
         # Also, name the prediction file based on the model, date, git version...
-        test_tosubmit_folder = os.path.join(log_folder,'V34-VotBag25GbrXgbLgbm-OutlierRemSVM+NumFPowerTrans')
+        test_tosubmit_folder = os.path.join(log_folder,'V34-VotBag10GbrXgbLgbm-OutlierRemSVM+NumFPowerTrans')
         # Create log folder if does not exist
         if not Path(test_tosubmit_folder).exists():
             os.mkdir(test_tosubmit_folder)
-        test_name = 'V34-VotBag25GbrXgbLgbm-OutlierRemSVM+NumFPowerTrans-RanSta42-CoxBoxY-gitvers-xxxx-2020-12-13'
+        test_name = 'V34-VotBag10GbrXgbLgbm-OutlierRemSVM+NumFPowerTrans-RanSta42-CoxBoxY-gitvers-xxxx-2020-12-13'
         prediction_file_save_path = os.path.join(test_tosubmit_folder, test_name+'.csv')
         print('\nSaving prediction to "{:}"'.format(prediction_file_save_path))
         test_pd.to_csv(prediction_file_save_path, sep=',', index=False)
