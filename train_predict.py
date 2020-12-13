@@ -49,7 +49,7 @@ use_scaling_for_y = True
 include_images = False
 remove_outliers = True
 
-num_bagging_estimators = 25
+num_bagging_estimators = 10
 
 num_languages_to_featureize = 16
 
@@ -324,11 +324,11 @@ def main():
         # done to the data and any other relevent information. Don't forget
         # to add the prediction file itself to the subfolder submissions\pred_files.
         # Also, name the prediction file based on the model, date, git version...
-        test_tosubmit_folder = os.path.join(log_folder,'V34-VotBag10GbrXgbLgbm-OutlierRemSVM+NumFPowerTrans')
+        test_tosubmit_folder = os.path.join(log_folder,'V38-VotBag10GbrXgbLgbm-OutlierRemSVM+NumFPowerTrans')
         # Create log folder if does not exist
         if not Path(test_tosubmit_folder).exists():
             os.mkdir(test_tosubmit_folder)
-        test_name = 'V34-VotBag10GbrXgbLgbm-OutlierRemSVM+NumFPowerTrans-RanSta42-CoxBoxY-gitvers-xxxx-2020-12-13'
+        test_name = 'V38-VotBag10GbrXgbLgbm-OutlierRemSVM+NumFPowerTrans-RanSta42-CoxBoxY-gitvers-xxxx-2020-12-13'
         prediction_file_save_path = os.path.join(test_tosubmit_folder, test_name+'.csv')
         print('\nSaving prediction to "{:}"'.format(prediction_file_save_path))
         test_pd.to_csv(prediction_file_save_path, sep=',', index=False)
