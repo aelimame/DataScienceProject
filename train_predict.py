@@ -25,7 +25,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.model_selection import KFold, RepeatedKFold
 from sklearn.model_selection import cross_val_score
 from sklearn.feature_selection import SelectKBest, f_regression, mutual_info_regression
-from sklearn.ensemble import GradientBoostingRegressor, BaggingRegressor, RandomForestRegressor, AdaBoostRegressor, VotingRegressor, IsolationForest
+from sklearn.ensemble import GradientBoostingRegressor, BaggingRegressor, RandomForestRegressor, AdaBoostRegressor, VotingRegressor, IsolationForest, StackingRegressor
 from sklearn.metrics import mean_squared_error, make_scorer
 from sklearn.base import clone
 
@@ -49,7 +49,7 @@ use_scaling_for_y = True
 include_images = False
 remove_outliers = True
 
-num_bagging_estimators = 20
+num_bagging_estimators = 25
 
 num_languages_to_featureize = 16
 
@@ -185,42 +185,49 @@ def main():
                             random_state=random_seed)
     bagging_gbm = BaggingRegressor(base_estimator=gbm, n_estimators=num_bagging_estimators, random_state=random_seed, warm_start=False)
 
-    #Voting regressor
-    voting_regressor = VotingRegressor([('BagGbr', bagging_gbr),
-                                        ('BagXgb', bagging_xgb),
-                                        ('BagGbm', bagging_gbm)],
-                                        n_jobs=-1)
+    # Voting regressor
+    regressor = VotingRegressor([('BagGbr', bagging_gbr),
+                                ('BagXgb', bagging_xgb),
+                                ('BagGbm', bagging_gbm)],
+                                n_jobs=-1)
+
+    # Stacking regressor
+    # regressor = StackingRegressor([ ('BagGbr', bagging_gbr),
+    #                                 ('BagXgb', bagging_xgb),
+    #                                 ('BagGbm', bagging_gbm)],
+    #                                 n_jobs=-1)
 
     # -- Pipeline (Has scaling, power_transform and regressor inside) --
     pipe = create_pipeline(use_scaling_for_y=use_scaling_for_y,
                            data_transformer=data_transformer,
                            feature_selector=feature_selector,
-                           regressor=voting_regressor)
+                           regressor=regressor)
 
 
     # --  Outliers removal k-fold CV evaluation --
     if remove_outliers:
-        cv_outer = KFold(n_splits=5, shuffle=True, random_state=random_seed)
-        result_scores = []
-        for train_ix, valid_ix in cv_outer.split(data_X):
-            # split data
-            train_X, valid_X = data_X.iloc[train_ix, :], data_X.iloc[valid_ix, :]
-            train_y, valid_y = data_y[train_ix], data_y[valid_ix]
+        data_X, data_y = remove_numerical_outliers(data_X, data_y)
+        # cv_outer = KFold(n_splits=5, shuffle=True, random_state=random_seed)
+        # result_scores = []
+        # for train_ix, valid_ix in cv_outer.split(data_X):
+        #     # split data
+        #     train_X, valid_X = data_X.iloc[train_ix, :], data_X.iloc[valid_ix, :]
+        #     train_y, valid_y = data_y[train_ix], data_y[valid_ix]
 
-            # REMOVE OUTLIERS FROM train_X/train_y only.
-            train_X, train_y = remove_numerical_outliers(train_X, train_y)
+        #     # REMOVE OUTLIERS FROM train_X/train_y only.
+        #     train_X, train_y = remove_numerical_outliers(train_X, train_y)
 
-            # Evaluate/train pipe/models defined above using the "cleaned" train and valid sets
-            pipe_outliers = clone(pipe)
-            pipe_outliers.fit(train_X, train_y)
-            valid_pred_y = pipe_outliers.predict(valid_X)
-            curr_score = rmsle(valid_y, valid_pred_y)
+        #     # Evaluate/train pipe/models defined above using the "cleaned" train and valid sets
+        #     pipe_outliers = clone(pipe)
+        #     pipe_outliers.fit(train_X, train_y)
+        #     valid_pred_y = pipe_outliers.predict(valid_X)
+        #     curr_score = rmsle(valid_y, valid_pred_y)
 
-            # Save scores
-            result_scores.append(curr_score)
+        #     # Save scores
+        #     result_scores.append(curr_score)
 
-        # -- Print score --
-        print('\n\nK-Fold CV RMSE OUTLIERS-REMOVED: %.10f (%.5f)\n\n' % (np.mean(result_scores), np.std(result_scores)))   
+        # # -- Print score --
+        # print('\n\nK-Fold CV RMSE OUTLIERS-REMOVED: %.10f (%.5f)\n\n' % (np.mean(result_scores), np.std(result_scores)))   
 
 
     # -- KFold CV using scorer based on rmsle --
