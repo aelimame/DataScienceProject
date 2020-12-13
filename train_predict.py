@@ -54,7 +54,7 @@ num_bagging_estimators = 25
 num_languages_to_featureize = 16
 
 # Change this to generate a prediction on test
-predict_on_test = False
+predict_on_test = True
 
 # data paths
 train_text_path = r'./src_data/train.csv'
