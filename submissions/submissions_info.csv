@@ -30,4 +30,5 @@ v27, 11-12-2020,396524b172ae2325d1f4a3fb7687329fe042d14c,"VotBag 25 GbrXgbLgb + 
 v28, 11-12-2020,a972a5caa2888a40779045b62a5fad23b8da775a,"VotBag 25 GbrXgbLgb + OrdinalEncoder instead of OneHot + RobustScaler for num features + NO outliers removed + manually remove Likes over 200K", 1.71954, 1.6992719233
 v29, 12-12-2020,10dd10957fdfa8d0f49a5277977a2060e6d42aca,"VotBag 10 GbrXgbLgb + OrdinalEncoder instead of OneHot + RobustScaler for num features + outliers removed SVM + manually remove Likes over 200K", 1.71581, 1.6996558760
 v30, 12-12-2020,1a569722e107142ddd8502624e3d77d44fa41b2d,"VotBag 10 GbrXgbLgb + OneHot instead of OrdinalEncoder + RobustScaler for num features + outliers removed SVM + manually remove Likes over 200K", 1.70626, 1.7022840378
-v31, 12-12-2020, b760a14b608c1273d7fde2b8a058812a0d0410b7,"Same as V30 but bagging 150 instead of 10", 1.70923, 1.6994464024
+v31, 12-12-2020,b760a14b608c1273d7fde2b8a058812a0d0410b7,"Same as V30 but bagging 150 instead of 10", 1.70923, 1.6994464024
+v32, 12-12-2020,3c421644965386e1a5c53bb9c3e2e7ea633eaf93,"Same as V30 but Outliers removal SVM uses PowerTransform instead of RobustScaler", 1.70859, 1.7022840378
