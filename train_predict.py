@@ -245,7 +245,7 @@ def main():
         #     train_y, valid_y = data_y[train_ix], data_y[valid_ix]
 
         #     # REMOVE OUTLIERS FROM train_X/train_y only.
-        #     train_X, train_y = remove_numerical_outliers(train_X, train_y)
+        #     train_X, train_y = remove_numerical_outliers_iqr(train_X, train_y)
 
         #     # Evaluate/train pipe/models defined above using the "cleaned" train and valid sets
         #     pipe_outliers = clone(pipe)
@@ -323,7 +323,7 @@ def main():
         # -- Remove Outliers --
         if remove_outliers:
             print('Removing Outliers')
-            data_final_X, data_final_y = remove_numerical_outliers(data_final_X, data_final_y)
+            data_final_X, data_final_y = remove_numerical_outliers_iqr(data_final_X, data_final_y)
             print('Data (Outliers removed) shape {:} {:}'.format(data_final_X.shape, data_final_y.shape))
             # *** DEBUG ****
             #debug = data_final_X.copy()
@@ -354,11 +354,11 @@ def main():
         # done to the data and any other relevent information. Don't forget
         # to add the prediction file itself to the subfolder submissions\pred_files.
         # Also, name the prediction file based on the model, date, git version...
-        test_tosubmit_folder = os.path.join(log_folder,'V40-VotBag10GbrXgbLgbm+SrvBag20-OutlrSVM-200KLikeIn')
+        test_tosubmit_folder = os.path.join(log_folder,'V41-VotBag10GbrXgbLgbm+SrvBag20-OutlrIQR-200KLikeIn')
         # Create log folder if does not exist
         if not Path(test_tosubmit_folder).exists():
             os.mkdir(test_tosubmit_folder)
-        test_name = 'V40-VotBag10GbrXgbLgbm+SrvBag20-OutlrSVM+200KLikeIn-RanSta42-CoxBoxY-gitvers-xxxx-2020-12-14'
+        test_name = 'V41-VotBag10GbrXgbLgbm+SrvBag20-OutlrIQR+200KLikeIn-RanSta42-CoxBoxY-gitvers-xxxx-2020-12-14'
         prediction_file_save_path = os.path.join(test_tosubmit_folder, test_name+'.csv')
         print('\nSaving prediction to "{:}"'.format(prediction_file_save_path))
         test_pd.to_csv(prediction_file_save_path, sep=',', index=False)
