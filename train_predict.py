@@ -48,8 +48,8 @@ OUTPUT_NAME = 'likes'
 
 # params
 use_scaling_for_y = True
-include_images = False
-remove_outliers = True
+include_images = True
+remove_outliers = False
 
 num_bagging_estimators = 10
 num_svr_bagging_estimators = 20
@@ -130,10 +130,18 @@ def main():
                                         profiles_ids_list=None, # Load all profiles in data
                                         include_images=include_images)
     # No Need for dict for the moment
+    data_images_X = data_X[IMAGE_INPUT_NAME]
     data_X = data_X[TEXT_FEATURES_INPUT_NAME]
     data_y = data_y[OUTPUT_NAME]
 
+    # Try to use images as a feature to pass to the transformer
+    data_X['Images'] = None
+    for index, sample in data_X.iterrows():
+        image_arr = data_images_X[index]
+        data_X.loc[index, 'Images'] = [image_arr]
+
     print('Data shape {:} {:}'.format(data_X.shape, data_y.shape))
+    #print('Data shape, text: {:}, images {:}, y {:}'.format(data_X[TEXT_FEATURES_INPUT_NAME].shape, data_X[IMAGE_INPUT_NAME].shape, data_y[OUTPUT_NAME].shape))
 
     # -- Prepare pipeline --
 
@@ -235,6 +243,11 @@ def main():
                            regressor=regressor)
 
 
+    ###### DEBUG ######
+    #pipe.fit(data_X, data_y)
+    ###### \DEBUG ######
+
+
     # --  Outliers removal k-fold CV evaluation --
     if remove_outliers:
         data_X, data_y = remove_numerical_outliers(data_X, data_y)
@@ -303,8 +316,15 @@ def main():
                                         profiles_ids_list=None, # Load all profiles in data
                                         include_images=include_images)
         # No Need for dict for the moment
+        data_final_images_X = data_final_X[IMAGE_INPUT_NAME]
         data_final_X = data_final_X[TEXT_FEATURES_INPUT_NAME]
         data_final_y = data_final_y[OUTPUT_NAME]
+
+        # Try to use images as a feature to pass to the transformer
+        data_final_X['Images'] = None
+        for index, sample in data_final_X.iterrows():
+            image_arr = data_final_images_X[index]
+            data_final_X.loc[index, 'Images'] = [image_arr]
 
         # -- Preare Test data  X, y --
         test_profiles_ids_list = test_text_data_loader.get_orig_features()['Id'].values
@@ -317,7 +337,14 @@ def main():
                                     include_images=include_images)
 
         # No Need for dict for the moment
+        test_images_X = test_X[IMAGE_INPUT_NAME]
         test_X = test_X[TEXT_FEATURES_INPUT_NAME]
+
+        # Try to use images as a feature to pass to the transformer
+        test_X['Images'] = None
+        for index, sample in test_X.iterrows():
+            image_arr = test_images_X[index]
+            test_X.loc[index, 'Images'] = [image_arr]
 
         print('Test shape {:}'.format(test_X.shape))
 
@@ -355,11 +382,11 @@ def main():
         # done to the data and any other relevent information. Don't forget
         # to add the prediction file itself to the subfolder submissions\pred_files.
         # Also, name the prediction file based on the model, date, git version...
-        test_tosubmit_folder = os.path.join(log_folder,'V43-VotBag10GbrXgbLgbm+SrvBag20-OutlrSVM-Ovr200KLikeRmoved')
+        test_tosubmit_folder = os.path.join(log_folder,'V43-VotBag10GbrXgbLgbm+SrvBag20-ImagesPCA')
         # Create log folder if does not exist
         if not Path(test_tosubmit_folder).exists():
             os.mkdir(test_tosubmit_folder)
-        test_name = 'V43-VotBag10GbrXgbLgbm+SrvBag20-OutlrSVM-Ovr200KLikeRmoved-RanSta42-CoxBoxY-gitvers-xxxx-2020-12-14'
+        test_name = 'V43-VotBag10GbrXgbLgbm+SrvBag20-ImagesPCA-RanSta42-CoxBoxY-gitvers-xxxx-2020-12-14'
         prediction_file_save_path = os.path.join(test_tosubmit_folder, test_name+'.csv')
         print('\nSaving prediction to "{:}"'.format(prediction_file_save_path))
         test_pd.to_csv(prediction_file_save_path, sep=',', index=False)

@@ -36,6 +36,11 @@ N_DECIMALS = 7
 
 N_COMPONENTS_IMAGE_PCA = 20
 
+# Names for acces to data in Dict (to be used with model inputs/output for better referencing)
+IMAGE_INPUT_NAME = 'image'
+TEXT_FEATURES_INPUT_NAME = 'text_features'
+OUTPUT_NAME = 'likes'
+
 
 # Custom Transformer that modifies colour columns
 class ColorsTransformer( BaseEstimator, TransformerMixin ):
@@ -368,22 +373,31 @@ class ImageTransformer( BaseEstimator, TransformerMixin ):
         self.pca = PCA(n_components=N_COMPONENTS_IMAGE_PCA)
 
     def fit( self, X, y = None ):
-        image_data = X['WHAT FIELD NAMES?']
-        image_data = self.scaler.fit(image_data)
-        image_data = self.pca.fit(image_data)
+        X = X.copy()
+
+        # Flatten images to 1d array
+        images_data = np.array(X.Images.tolist())
+        img_array_flat_shape = images_data.shape[1] * images_data.shape[2] *images_data.shape[3]
+        images_data = images_data.reshape(images_data.shape[0],img_array_flat_shape)
+        self.scaler.fit(images_data)
+        images_data = self.scaler.transform(images_data)
+        self.pca.fit(images_data)
         return self
 
     def transform( self, X, y = None ):
         # Force copy so we don't change X inplace
         X = X.copy()
         
-        image_data = X['WHAT FIELD NAMES?']
-        image_data = self.scaler.transform(image_data)
-        image_data = self.pca.transform(image_data)
+        # Flatten images to 1d array
+        images_data = np.array(X.Images.tolist())
+        img_array_flat_shape = images_data.shape[1] * images_data.shape[2] *images_data.shape[3]
+        images_data = images_data.reshape(images_data.shape[0],img_array_flat_shape)
+        images_data = self.scaler.transform(images_data)
+        images_data = self.pca.transform(images_data)
 
         self._out_feature_names = self._in_feature_names
 
-        return X[self._out_feature_names].values
+        return images_data
 
 
 
@@ -534,30 +548,59 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
         if self.num_tzones_to_featureize != 0 or self.num_utc_to_featureize !=0:
            transformer_list += [('location_adv_transformer', location_adv_transformer)]
 
-        if self.enable_image_features:
-            transformer_list += [('image_pipleline', image_pipleline)]
-
         if transformer_list == []:
             raise ValueError('HAL9001DataTransformer: At least one feature should be enabled!')
 
         self.all_features_transformer = FeatureUnion(transformer_list = transformer_list)
 
+        # Images are treaded seperately
+        if self.enable_image_features:
+            self.images_features_transformer = image_pipleline#[('image_pipleline', image_pipleline)]
+
     def fit(self, X, y = None):
+        
+        if self.enable_image_features:
+            data_images_X = X[['Images']]
+            data_X = X.drop(columns ='Images')
+        else:
+            data_X = X
+
         # Force copy so we don't change X inplace
         if self.copy:
-            X = X.copy()
-        self.all_features_transformer.fit(X)
+            data_X = data_X.copy()
+            if self.enable_image_features:
+                data_images_X = data_images_X.copy()
+
+        self.all_features_transformer.fit(data_X)
+        if self.enable_image_features:
+            self.images_features_transformer.fit(data_images_X)
         self.has_been_fit = True
         return self
 
     def transform(self, X, y = None):
+
         if self.has_been_fit:
+            if self.enable_image_features:
+                data_images_X = X[['Images']]
+                data_X = X.drop(columns ='Images')
+            else:
+                data_X = X
+
             # Force copy so we don't change X inplace
             if self.copy:
-                X = X.copy()
+                data_X = data_X.copy()
+                if self.enable_image_features:
+                    data_images_X = data_images_X.copy()
 
             transf_X = self.all_features_transformer.transform(X)
-            return transf_X
+            if self.enable_image_features:
+                transf_image_X = self.images_features_transformer.transform(data_images_X)
+                all_X = np.concatenate((transf_X, transf_image_X), axis=1)
+                return all_X
+            else:
+                return transf_X
+            
+            
         else:
             msg = ("This %(name)s instance is not fitted yet. Call 'fit' with "
                    "appropriate arguments before using this estimator.")
