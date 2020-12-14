@@ -39,3 +39,4 @@ v36,13-12-2020,39a3ec3e8702e0655a25bd8f1c40899b249fe259,"Same as V35 but bumped 
 v37,13-12-2020,cc98c0227da8fdd4734b5c7ee110a6fea35b02a4,Same as V36 but bumped number of languages to 16 (for real this time) V36 only changed the default values. 25 Bagging regressors,1.70430,1.6947790580
 v38,13-12-2020,b60f4612033ae2652dfce8d5de12c320bac55684,Same as V36 but 10 Bagging regressors,1.70113,1.6970473261
 v39,14-12-2020,3153a9bb188e20db3a3bf8f039ae54db5aa690d5,Same as V38 + SVR with 20bagging,1.69955,1.6956310056
+v40,14-12-2020,f729e7be94827c3d645400845b12faf68c27b525,Same as V39 + over 200K Likes that were removed manually are now included,1.70654,1.6912373576
