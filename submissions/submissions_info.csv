@@ -38,3 +38,4 @@ v35,13-12-2020,,same as V34 but NO bagging,1.71796,1.7048777881
 v36,13-12-2020,39a3ec3e8702e0655a25bd8f1c40899b249fe259,"Same as V35 but bumped number of languages to 16 and added 4 new features based on [ 'Num of Followers’, 'Num of People Following',   'Num of Status Updates', 'Num of Direct Messages’] each divided by account age",1.70430,1.6967218889
 v37,13-12-2020,cc98c0227da8fdd4734b5c7ee110a6fea35b02a4,Same as V36 but bumped number of languages to 16 (for real this time) V36 only changed the default values. 25 Bagging regressors,1.70430,1.6947790580
 v38,13-12-2020,b60f4612033ae2652dfce8d5de12c320bac55684,Same as V36 but 10 Bagging regressors,1.70113,1.6970473261
+v39,14-12-2020,3153a9bb188e20db3a3bf8f039ae54db5aa690d5,Same as V38 + SVR with 20bagging,1.69955,1.6956310056
