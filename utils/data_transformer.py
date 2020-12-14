@@ -3,6 +3,7 @@ import numpy as np
 import random
 import pandas as pd
 import os
+
 # Fix random seeds, Same one to be used everywhere
 random_seed = 42
 os.environ['PYTHONHASHSEED']=str(random_seed)
@@ -20,6 +21,7 @@ from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 from sklearn.pipeline import FeatureUnion, Pipeline
 from sklearn.exceptions import NotFittedError
+from sklearn.decomposition import PCA
 
 # TODO: Maybe remove this and use SimpleImputer?
 from utils.missing_values_filler import MissingValuesFiller
@@ -31,6 +33,8 @@ DEFAULT_NUM_USR_TZONES_TO_FEATUREIZE = 10
 DEFAULT_NUM_UTC_TO_FEATUREIZE = 15
 UTC_FOR_NA_VALUES = 10000000 # Define high value to give unique category to nan values
 N_DECIMALS = 7
+
+N_COMPONENTS_IMAGE_PCA = 20
 
 
 # Custom Transformer that modifies colour columns
@@ -355,6 +359,34 @@ class NumericalTransformer( BaseEstimator, TransformerMixin ):
 
         return X[feature_names_to_return].values
 
+# Custom Transformer that adds image features
+class ImageTransformer( BaseEstimator, TransformerMixin ):
+    def __init__( self, feature_names ):
+        self._in_feature_names = feature_names
+        self._out_feature_names = []
+        self.scaler = StandardScaler()
+        self.pca = PCA(n_components=N_COMPONENTS_IMAGE_PCA)
+
+    def fit( self, X, y = None ):
+        image_data = X['WHAT FIELD NAMES?']
+        image_data = self.scaler.fit(image_data)
+        image_data = self.pca.fit(image_data)
+        return self
+
+    def transform( self, X, y = None ):
+        # Force copy so we don't change X inplace
+        X = X.copy()
+        
+        image_data = X['WHAT FIELD NAMES?']
+        image_data = self.scaler.transform(image_data)
+        image_data = self.pca.transform(image_data)
+
+        self._out_feature_names = self._in_feature_names
+
+        return X[self._out_feature_names].values
+
+
+
 # HAL9001DataTransformer: Wrapper to call all the transfomers
 class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
     def __init__(self,
@@ -364,6 +396,7 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
                  enable_textual_features = True,
                  enable_categorical_features = True,
                  enable_datetime_features = True,
+                 enable_image_features = True,
                  num_languages_to_featureize = DEFAULT_NUM_LANGUAGES_TO_FEATUREIZE,
                  num_tzones_to_featureize = DEFAULT_NUM_USR_TZONES_TO_FEATUREIZE,
                  num_utc_to_featureize = DEFAULT_NUM_UTC_TO_FEATUREIZE,
@@ -378,6 +411,7 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
         self.enable_textual_features = enable_textual_features
         self.enable_categorical_features = enable_categorical_features
         self.enable_datetime_features = enable_datetime_features
+        self.enable_image_features = enable_image_features
         self.num_languages_to_featureize = num_languages_to_featureize
         self.num_tzones_to_featureize = num_tzones_to_featureize
         self.num_utc_to_featureize = num_utc_to_featureize
@@ -465,6 +499,13 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
                                                          #('num_scaler', RobustScaler())
                                                         ])
 
+        # Image features and pipeline
+        if self.enable_image_features:
+            image_features = ['Profile Image']
+            image_pipleline = Pipeline(steps = [ ('image_transformer', ImageTransformer(image_features)),
+                                                 ('image_scaler', RobustScaler())
+                                                ])
+
         # Combining numerical and categorical piepline into one full big pipeline horizontally
         # using FeatureUnion
         transformer_list = []
@@ -493,6 +534,8 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
         if self.num_tzones_to_featureize != 0 or self.num_utc_to_featureize !=0:
            transformer_list += [('location_adv_transformer', location_adv_transformer)]
 
+        if self.enable_image_features:
+            transformer_list += [('image_pipleline', image_pipleline)]
 
         if transformer_list == []:
             raise ValueError('HAL9001DataTransformer: At least one feature should be enabled!')

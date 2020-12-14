@@ -111,6 +111,7 @@ def main():
                                               enable_textual_features = True,
                                               enable_categorical_features = True,
                                               enable_datetime_features = True,
+                                              enable_image_features = include_images,
                                               num_languages_to_featureize = num_languages_to_featureize, # Default 9
                                               num_tzones_to_featureize = 10, # Default 10
                                               num_utc_to_featureize = 15) # Default 15
