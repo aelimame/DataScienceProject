@@ -42,3 +42,7 @@ v39,14-12-2020,3153a9bb188e20db3a3bf8f039ae54db5aa690d5,Same as V38 + SVR with 2
 v40,14-12-2020,f729e7be94827c3d645400845b12faf68c27b525,Same as V39 + over 200K Likes that were removed manually are now included,1.70654,1.6912373576
 v41,14-12-2020,9231a1ec1b074e0d3fd1df44c63f6fc9e345a761,Same as V40 but using IQR for outliers removal,1.70649,1.6949077666
 v42,14-12-2020,14ba0f960fd59f2bd62b6c3c63c71db7253f50b6,Same as V41 but put back code to remove over 200K Likes manually (just like in best score V39), ,1.6991592473
+v39B,14-12-2020,,Same exact code as V39, but using random_seed=0 in train_predict.py,1.71252,1.6966006919
+v39C,14-12-2020,,Same exact code as V39, but using random_seed=1 in train_predict.py,1.70875,1.6926131422
+v39D,14-12-2020,,Same exact code as V39, but using random_seed=7 in train_predict.py,1.70810,1.6959040230
+v39E,14-12-2020,,Same exact code as V39, but using random_seed=5 in all files,1.70151,1.6931427450
