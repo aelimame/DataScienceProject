@@ -23,6 +23,8 @@ from sklearn.pipeline import FeatureUnion, Pipeline
 from sklearn.exceptions import NotFittedError
 from sklearn.decomposition import PCA
 
+import cv2
+
 # TODO: Maybe remove this and use SimpleImputer?
 from utils.missing_values_filler import MissingValuesFiller
 mvf = MissingValuesFiller()
@@ -34,7 +36,7 @@ DEFAULT_NUM_UTC_TO_FEATUREIZE = 15
 UTC_FOR_NA_VALUES = 10000000 # Define high value to give unique category to nan values
 N_DECIMALS = 7
 
-N_COMPONENTS_IMAGE_PCA = 20
+N_COMPONENTS_IMAGE_PCA = 150
 
 # Names for acces to data in Dict (to be used with model inputs/output for better referencing)
 IMAGE_INPUT_NAME = 'image'
@@ -371,33 +373,85 @@ class ImageTransformer( BaseEstimator, TransformerMixin ):
         self._out_feature_names = []
         self.scaler = StandardScaler()
         self.pca = PCA(n_components=N_COMPONENTS_IMAGE_PCA)
+        self.do_pca = False # If true 
 
     def fit( self, X, y = None ):
         X = X.copy()
 
-        # Flatten images to 1d array
-        images_data = np.array(X.Images.tolist())
-        img_array_flat_shape = images_data.shape[1] * images_data.shape[2] *images_data.shape[3]
-        images_data = images_data.reshape(images_data.shape[0],img_array_flat_shape)
-        self.scaler.fit(images_data)
-        images_data = self.scaler.transform(images_data)
-        self.pca.fit(images_data)
+        if self.do_pca:
+            # Flatten images to 1d array
+            images_data = np.array(X.Images.tolist())
+            img_array_flat_shape = images_data.shape[1] * images_data.shape[2] *images_data.shape[3]
+            images_data = images_data.reshape(images_data.shape[0],img_array_flat_shape)
+            self.scaler.fit(images_data)
+            images_data = self.scaler.transform(images_data)
+            self.pca.fit(images_data)
+#        else:
+#            images_data = np.array(X.Images.tolist())
+#            images_h_data = []
+#            for image in images_data:
+#                hog = cv2.HOGDescriptor()
+#                im = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+#                hist = hog.compute(im)
+#                images_h_data += [hist]
+
         return self
 
     def transform( self, X, y = None ):
         # Force copy so we don't change X inplace
         X = X.copy()
         
-        # Flatten images to 1d array
-        images_data = np.array(X.Images.tolist())
-        img_array_flat_shape = images_data.shape[1] * images_data.shape[2] *images_data.shape[3]
-        images_data = images_data.reshape(images_data.shape[0],img_array_flat_shape)
-        images_data = self.scaler.transform(images_data)
-        images_data = self.pca.transform(images_data)
+        if self.do_pca:
+            # Flatten images to 1d array
+            images_data = np.array(X.Images.tolist())
+            img_array_flat_shape = images_data.shape[1] * images_data.shape[2] *images_data.shape[3]
+            images_data = images_data.reshape(images_data.shape[0],img_array_flat_shape)
+            images_data = self.scaler.transform(images_data)
+            images_data = self.pca.transform(images_data)
+        else:
+            images_data = np.array(X.Images.tolist())
+#            winSize = (8,16)
+#            blockSize = (4,4)
+#            blockStride = (2,2)
+#            cellSize = (2,2)
+#            nbins = 9
+#            hog = cv2.HOGDescriptor(winSize, blockSize, blockStride, cellSize, 9)
+
+            img_dim1 = images_data.shape[1]
+            img_dim2 = images_data.shape[2]
+            # Ref: https://stackoverflow.com/questions/44972099/opencv-hog-features-explanation
+            cell_size = (16, 16)  # h x w in pixels
+            block_size = (2, 2)  # h x w in cells
+            nbins = 9  # number of orientation bins
+            #hog = cv2.HOGDescriptor(winSize, blockSize, blockStride, cellSize, 9)
+            hog = cv2.HOGDescriptor((img_dim1 // cell_size[1] * cell_size[1], img_dim2 // cell_size[0] * cell_size[0]),
+                                    (block_size[1] * cell_size[1], block_size[0] * cell_size[0]),
+                                    (cell_size[1], cell_size[0]),
+                                    (cell_size[1], cell_size[0]),
+                                    nbins)
+
+            # Dummy run to just get the size of the hist
+            image = images_data[0]
+            image = np.clip((image*255), a_min=0, a_max=255).astype(np.uint8)
+            im = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)#cv2.COLOR_RGB2BGR)
+            hist = hog.compute(im)
+
+            # Init empty array with right hit size as 
+            hist_size = hist.shape[0]
+            print('CV2 HOG hist_size: {:}'.format(hist_size))
+            images_h_data = np.empty((0,hist_size))
+            
+            # Run on all images
+            for image in images_data:
+                image = np.clip((image*255), a_min=0, a_max=255).astype(np.uint8)
+                im = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)#cv2.COLOR_RGB2BGR)
+                hist = hog.compute(im)
+                hist = hist.reshape(1, -1)
+                images_h_data = np.concatenate((images_h_data, hist), axis=0)
 
         self._out_feature_names = self._in_feature_names
 
-        return images_data
+        return images_h_data
 
 
 
