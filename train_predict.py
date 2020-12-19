@@ -46,6 +46,14 @@ IMAGE_INPUT_NAME = 'image'
 TEXT_FEATURES_INPUT_NAME = 'text_features'
 OUTPUT_NAME = 'likes'
 
+# Change these bool flags to evaluate on Train set and/or generate a prediction on Test set
+# IMPROTANT: For reproducibility purposes please run only either evaluate_cv_on_train
+# or predict_on_train. Doing both at the same time causes reproducibility issues
+# when predicting on the Test set.
+evaluate_cv_on_train = False
+predict_on_test = True
+
+
 # params
 use_scaling_for_y = True
 include_images = False
@@ -55,9 +63,6 @@ num_bagging_estimators = 10
 num_svr_bagging_estimators = 20
 
 num_languages_to_featureize = 16
-
-# Change this to generate a prediction on test
-predict_on_test = True
 
 # data paths
 train_text_path = r'./src_data/train.csv'
@@ -78,7 +83,7 @@ def main():
 
     # -- Load TRAIN set --
     # Images loader
-    print('\nTRAIN:')
+    print('\nLoading TRAIN data:')
     images_loader = ImagesLoader(src_folder_path = train_images_folder)
     print('Number images: {:}'.format(images_loader.nbr_images))
     print('Images shape: {:}'.format(images_loader.image_shape))
@@ -87,7 +92,7 @@ def main():
 
     # -- Load TEST set --
     # Test Images loader
-    print('\nTEST:')
+    print('\nLoading TEST data:')
     test_images_loader = ImagesLoader(src_folder_path = test_images_folder)
     print('Number images: {:}'.format(test_images_loader.nbr_images))
     print('Images shape: {:}'.format(test_images_loader.image_shape))
@@ -120,7 +125,6 @@ def main():
     feature_selector = None # SelectKBest(mutual_info_regression, k=66)
 
     # -- Prepare Train data X, y --
-    print('\n\nEvaluating on Train data using k-fold-CV')
     data_X, data_y = load_x_y_from_loaders(images_loader=images_loader,
                                         text_data_loader=text_data_loader,
                                         image_input_name=IMAGE_INPUT_NAME,
@@ -137,7 +141,6 @@ def main():
     # -- Prepare pipeline --
 
     # Pipeline with best searched hyper parms
-    print('Buiding and evaluating pipeline with models')
     # GBR
     # RandSearchCV params
     #'regressor__votingregressor__BagGbr__base_estimator__n_estimators': 200,
@@ -228,62 +231,75 @@ def main():
     #                                 n_jobs=-1)
 
     # -- Pipeline (Has scaling, power_transform and regressor inside) --
+    print('\nBuiding pipeline with models')
     pipe = create_pipeline(use_scaling_for_y=use_scaling_for_y,
                            data_transformer=data_transformer,
                            feature_selector=feature_selector,
                            regressor=regressor)
 
+    if evaluate_cv_on_train:
+        print('\n\nEvaluating on Train data using k-fold-CV')
 
-    # --  Outliers removal k-fold CV evaluation --
-    if remove_outliers:
-        data_X, data_y = remove_numerical_outliers_iqr(data_X, data_y)
-        # cv_outer = KFold(n_splits=5, shuffle=True, random_state=random_seed)
-        # result_scores = []
-        # for train_ix, valid_ix in cv_outer.split(data_X):
-        #     # split data
-        #     train_X, valid_X = data_X.iloc[train_ix, :], data_X.iloc[valid_ix, :]
-        #     train_y, valid_y = data_y[train_ix], data_y[valid_ix]
+        # --  Outliers removal k-fold CV evaluation --
+        if remove_outliers:
+            # The following code is for evaluation of the impact of outliers removal
+            # it is important to do it this way: Split to train/valid k-folds, remove
+            # outliers from train set and evaluate on the remaining validation set (has
+            # outliers). This ensures we get unbiased evaluation of the impact of the
+            # outliers removal.
+            """
+            cv_outer = KFold(n_splits=5, shuffle=True, random_state=random_seed)
+            result_scores = []
+            for train_ix, valid_ix in cv_outer.split(data_X):
+                # split data
+                train_X, valid_X = data_X.iloc[train_ix, :], data_X.iloc[valid_ix, :]
+                train_y, valid_y = data_y[train_ix], data_y[valid_ix]
 
-        #     # REMOVE OUTLIERS FROM train_X/train_y only.
-        #     train_X, train_y = remove_numerical_outliers_iqr(train_X, train_y)
+                # REMOVE OUTLIERS FROM train_X/train_y only.
+                train_X, train_y = remove_numerical_outliers_iqr(train_X, train_y)
 
-        #     # Evaluate/train pipe/models defined above using the "cleaned" train and valid sets
-        #     pipe_outliers = clone(pipe)
-        #     pipe_outliers.fit(train_X, train_y)
-        #     valid_pred_y = pipe_outliers.predict(valid_X)
-        #     curr_score = rmsle(valid_y, valid_pred_y)
+                # Evaluate/train pipe/models defined above using the "cleaned" train and valid sets
+                pipe_outliers = clone(pipe)
+                pipe_outliers.fit(train_X, train_y)
+                valid_pred_y = pipe_outliers.predict(valid_X)
+                curr_score = rmsle(valid_y, valid_pred_y)
 
-        #     # Save scores
-        #     result_scores.append(curr_score)
+                # Save scores
+                result_scores.append(curr_score)
 
-        # # -- Print score --
-        # print('\n\nK-Fold CV RMSE OUTLIERS-REMOVED: %.10f (%.5f)\n\n' % (np.mean(result_scores), np.std(result_scores)))   
+            # -- Print score --
+            print('\n\nK-Fold CV RMSE OUTLIERS-REMOVED: %.10f (%.5f)\n\n' % (np.mean(result_scores), np.std(result_scores)))
+            """
+
+            # Now remove outliers for next step
+            data_X, data_y = remove_numerical_outliers_iqr(data_X, data_y)
 
 
-    # -- KFold CV using scorer based on rmsle --
-    scorer = make_scorer(rmsle, greater_is_better=False)
-    kfoldcv = KFold(n_splits=5, random_state=random_seed, shuffle=True)
-#    rep_kfoldcv = RepeatedKFold(n_splits=5, n_repeats=3, random_state=random_seed)
+        # -- KFold CV using scorer based on rmsle --
+        scorer = make_scorer(rmsle, greater_is_better=False)
+        kfoldcv = KFold(n_splits=5, random_state=random_seed, shuffle=True)
+        #rep_kfoldcv = RepeatedKFold(n_splits=5, n_repeats=3, random_state=random_seed)
 
-    pipe_cv = clone(pipe)
-    scores = cross_val_score(pipe_cv,
-                             data_X,
-                             data_y,
-                             scoring=scorer,
-                             cv=kfoldcv,
-                             n_jobs=-1)
+        pipe_cv = clone(pipe)
+        scores = cross_val_score(pipe_cv,
+                                data_X,
+                                data_y,
+                                scoring=scorer,
+                                cv=kfoldcv,
+                                n_jobs=-1)
 
-#    pipe_rep_cv = clone(pipe)
-#    rep_scores = cross_val_score(pipe_rep_cv,
-#                             data_X,
-#                             data_y,
-#                             scoring=scorer,
-#                             cv=rep_kfoldcv,
-#                             n_jobs=-1)
+        # Evaluate with repeated CV too, uncomment to run
+        #pipe_rep_cv = clone(pipe)
+        #rep_scores = cross_val_score(pipe_rep_cv,
+        #                         data_X,
+        #                         data_y,
+        #                         scoring=scorer,
+        #                         cv=rep_kfoldcv,
+        #                         n_jobs=-1)
 
-    # -- Print score --
-    print('K-Fold CV RMSLE: %.10f (%.5f)' % (np.mean(scores), np.std(scores)))
-#    print('Repeated K-Fold CV RMSLE: %.10f (%.5f)' % (np.mean(rep_scores), np.std(rep_scores)))
+        # -- Print score --
+        print('K-Fold CV RMSLE: %.10f (%.5f)' % (np.mean(scores), np.std(scores)))
+        #print('Repeated K-Fold CV RMSLE: %.10f (%.5f)' % (np.mean(rep_scores), np.std(rep_scores)))
 
 
 
@@ -325,13 +341,8 @@ def main():
             print('Removing Outliers')
             data_final_X, data_final_y = remove_numerical_outliers_iqr(data_final_X, data_final_y)
             print('Data (Outliers removed) shape {:} {:}'.format(data_final_X.shape, data_final_y.shape))
-            # *** DEBUG ****
-            #debug = data_final_X.copy()
-            #debug['y'] = data_final_y
-            #debug.to_csv(r'logs\V29-VotBag10GbrXgbLgbm-OutlierRemSVM-RobSclr\data_debug.txt', sep=',', index=False)
-            # *** /DEBUG ****
 
-        # -- Fit pipe (Transofrmation and model) on all Train data set --
+        # -- Fit pipe (Transformation and model) on all Train data set --
         print('Fitting on all data')
         pipe_final = clone(pipe)
         pipe_final.fit(data_final_X, data_final_y)

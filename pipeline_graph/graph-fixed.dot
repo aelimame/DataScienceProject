@@ -1,0 +1,122 @@
+digraph{
+  nodesep=0.03;
+  rankdir=LR;
+  ranksep=0.25;
+  bgcolor="transparent";
+  sch0[label="<f24>32x32x3 Profile Images|<f15> Num of Followers|<f16> Num of People Following|<f17> Num of Status Updates|<f18> Num of Direct Messages|<f20> Avg Daily Profile Visit Duration in seconds|<f21> Avg Daily Profile Clicks|<f12> User Language|<f3> Profile Cover Image Status|<f8> Is Profile View Size Customized?|<f10> Location|<f11> Location Public Visibility|<f13> Profile Creation Timestamp|<f4> Profile Verification Status|<f19> Profile Category|<f9> UTC Offset|<f14> User Time Zone|<f5> Profile Text Color|<f6> Profile Page Color|<f7> Profile Theme Color|<f2> Personal URL|<f0> Id|<f1> User Name|<f23> Num of Profile Likes",shape=record,color="#858585",fillcolor="#e8e6e8",style="filled",fontname="arial",fontsize=10];
+
+
+
+  node28[label="Target: Num of Profile Likes",shape=box,style="rounded,filled",color="#858585",fillcolor="#0dc057",fontname="arial",fontsize=12];
+  sch0:f23 -> node28;  
+  node29[label="CustomTargetTransformer(PowerTransformer)",shape=component,style="filled",color="#858585",fillcolor="#78b7e3",fontname="arial",fontsize=15];
+  node28 -> node29 [weight=100];
+  node30[label="Transformed Target",shape=box,style="rounded,filled",color="#858585",fillcolor="#ed7b47",fontname="arial",fontsize=12];
+  node29 -> node30 [weight=100];
+
+  
+  node25[label="32x32x3 Profile Images",shape=box,style="rounded,filled",color="#858585",fillcolor="#d1d1d1",fontname="arial",fontsize=12];
+  sch0:f24 -> node25 [weight=100];
+  node26[label="ImagesTransformer",shape=component,style="filled",color="#858585",fillcolor="#78b7e3",fontname="arial",fontsize=15];
+  node25 -> node26 [weight=100];
+  node27[label="Transformed Images Features",shape=box,style="rounded,filled",color="#858585",fillcolor="#deace6",fontname="arial",fontsize=12];
+  node26 -> node27 [weight=100];
+
+
+  node6[label="Numerical Features",shape=box,style="rounded,filled",color="#858585",fillcolor="#9adbc0",fontname="arial",fontsize=12];
+  sch0:f15 -> node6;
+  sch0:f16 -> node6;
+  sch0:f17 -> node6;
+  sch0:f18 -> node6;
+  sch0:f20 -> node6;
+  sch0:f21 -> node6;
+  node7[label="NumericalTransformer",shape=component,style="filled",color="#858585",fillcolor="#78b7e3",fontname="arial",fontsize=15];
+  node6 -> node7 [weight=100];
+  node8[label="SimpleImputer",shape=component,style="filled",color="#858585",fillcolor="#ede0b7",fontname="arial",fontsize=12];
+  node7 -> node8 [weight=100];
+  node9[label="PowerTransformer",shape=component,style="filled",color="#858585",fillcolor="#ede0b7",fontname="arial",fontsize=12];
+  node8 -> node9;
+
+
+
+  node12[label="Text Feature",shape=box,style="rounded,filled",color="#858585",fillcolor="#9adbc0",fontname="arial",fontsize=12];
+  sch0:f2 -> node12 [weight=100];
+  node13[label="TextTransformer",shape=component,style="filled",color="#858585",fillcolor="#78b7e3",fontname="arial",fontsize=15];
+  node12 -> node13 [weight=100];
+
+
+
+  node17[label="Languages Feature",shape=box,style="rounded,filled",color="#858585",fillcolor="#9adbc0",fontname="arial",fontsize=12];
+  sch0:f12 -> node17 [weight=100];
+  node18[label="LanguagesTransformer",shape=component,style="filled",color="#858585",fillcolor="#78b7e3",fontname="arial",fontsize=15];
+  node17-> node18 [weight=100];
+  node19[label="OneHotEncoder",shape=component,style="filled",color="#858585",fillcolor="#ede0b7",fontname="arial",fontsize=12];
+  node18 -> node19 [weight=100];
+
+
+
+  node4[label="Binary Features",shape=box,style="rounded,filled",color="#858585",fillcolor="#9adbc0",fontname="arial",fontsize=12];
+  sch0:f3 -> node4;
+  sch0:f8 -> node4;
+  sch0:f10 -> node4;
+  sch0:f11 -> node4;
+  node5[label="BinaryTransformer",shape=component,style="filled",color="#858585",fillcolor="#78b7e3",fontname="arial",fontsize=15];
+  node4 -> node5 [weight=100];
+
+
+
+  node14[label="Categorical Features",shape=box,style="rounded,filled",color="#858585",fillcolor="#9adbc0",fontname="arial",fontsize=12];
+  sch0:f4 -> node14;
+  sch0:f19 -> node14;
+  node15[label="CategoricalTransformer",shape=component,style="filled",color="#858585",fillcolor="#78b7e3",fontname="arial",fontsize=15];
+  node14 -> node15 [weight=100];
+  node16[label="OneHotEncoder",shape=component,style="filled",color="#858585",fillcolor="#ede0b7",fontname="arial",fontsize=12];
+  node15-> node16 [weight=200];
+
+
+
+  node20[label="Advanced Location Features",shape=box,style="rounded,filled",color="#858585",fillcolor="#9adbc0",fontname="arial",fontsize=12];
+  sch0:f9 -> node20;
+  sch0:f14 -> node20;
+  node21[label="LocationAdvancedTransformer",shape=component,style="filled",color="#858585",fillcolor="#78b7e3",fontname="arial",fontsize=15];
+  node20 -> node21 [weight=100];
+  node22[label="OneHotEncoder",shape=component,style="filled",color="#858585",fillcolor="#ede0b7",fontname="arial",fontsize=12];
+  node21 -> node22 [weight=100];
+
+
+
+  node10[label="Color Features",shape=box,style="rounded,filled",color="#858585",fillcolor="#9adbc0",fontname="arial",fontsize=12];
+  sch0:f5 -> node10;
+  sch0:f6 -> node10;
+  sch0:f7 -> node10;
+  node11[label="ColorsTransformer",shape=component,style="filled",color="#858585",fillcolor="#78b7e3",fontname="arial",fontsize=15];
+  node10-> node11 [weight=100];
+
+
+
+  node1[label="DateTime Feature",shape=box,style="rounded,filled",color="#858585",fillcolor="#9adbc0",fontname="arial",fontsize=12];
+  sch0:f13 -> node1 [weight=100]; 
+  node2[label="DateTimeTransformer",shape=component,style="filled",color="#858585",fillcolor="#78b7e3",fontname="arial",fontsize=15];
+  node1 -> node2 [weight=100];
+  node3[label="RobustScaler",shape=component,style="filled",color="#858585",fillcolor="#ede0b7",fontname="arial",fontsize=12];
+  node2 -> node3 [weight=200];
+
+
+
+  node23[label="All Transformed Features",shape=box,style="rounded,filled",color="#858585",fillcolor="#deace6",fontname="arial",fontsize=12];
+  node3 -> node23;
+  node5 -> node23;
+  node9 -> node23;
+  node11 -> node23;
+  node13 -> node23;
+  node16 -> node23;
+  node19 -> node23;
+  node22 -> node23;
+
+
+
+  node24[label="Voting regressors:\l - SkLearn GB\l - XGBoost\l - Light GBM\l - SkLearn SVM\l",shape=component,style="filled",color="#858585",fillcolor="#78b7e3",fontname="arial",fontsize=15];
+  node23 -> node24;
+  node27 -> node24;
+  node30 -> node24;
+}

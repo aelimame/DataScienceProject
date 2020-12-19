@@ -1,0 +1,1 @@
+dot -G=300 -Tpng "graph-fixed.dot" -o "graph.dot.png"
