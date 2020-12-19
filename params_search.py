@@ -217,23 +217,23 @@ def main():
     # XGBRegressor params
     xgbr_n_estimators = [100, 150, 200]
     xgbr_colsample_bytree = [0.6, 0.8, 1.0]
-#    xgbr__eta = [0.01, 0.05, 0.1, 0.15]
+    xgbr__eta = [0.01, 0.05, 0.1, 0.15]
     xgbr_max_depth = [3, 4, 5, 6, 8]#, 10]
     xgbr_min_child_weight = [1, 3, 5, 7]
     xgbr_subsample = [0.6, 0.8, 1.0]
 
     # Rand Forest
-    #rfrst_n_estimators = [100, 150, 200]
-    #rfrst_max_features = ['auto', None]
-    #rfrst_max_depth = [10, 20, 50, 80, None]
-    #rfrst_min_samples_split = [2, 3, 4, 5]#, 6, 8, 10]
-    #rfrst_min_samples_leaf = [1, 2, 3, 4, 5]#, 6, 8]#, 10]
-    #rfrst_bootstrap = [True, False]
+    rfrst_n_estimators = [100, 150, 200]
+    rfrst_max_features = ['auto', None]
+    rfrst_max_depth = [10, 20, 50, 80, None]
+    rfrst_min_samples_split = [2, 3, 4, 5]#, 6, 8, 10]
+    rfrst_min_samples_leaf = [1, 2, 3, 4, 5]#, 6, 8]#, 10]
+    rfrst_bootstrap = [True, False]
 
     # Ligth gbm
     gbm_n_estimators = [100, 150 ,200]# ,250] # larger
-#    gbm_learning_rate = [0.01, 0.05, 0.1, 0.15] # small
-#    gbm_max_depth =  [3, 4, 5, 6, 8, 10, 15, -1] #
+    gbm_learning_rate = [0.01, 0.05, 0.1, 0.15] # small
+    gbm_max_depth =  [3, 4, 5, 6, 8, 10, 15, -1] #
     gbm_num_leaves = [5, 10, 20, 31, 40, 60]#, 80, 100] # large  (may cause over-fitting)
     gbm_colsample_bytree = [0.6, 0.8, 1.0]
     gbm_subsample = [0.6, 0.8, 1.0]
@@ -259,6 +259,7 @@ def main():
                   'regressor__svr__kernel': ['rbf']
                  } 
     """
+    # All params. Comment/Uncomment those you need to run a search on
     param_grid = {# GBR
                   'regressor__votingregressor__BagGbr__base_estimator__n_estimators': gbr_n_estimators,
                   'regressor__votingregressor__BagGbr__base_estimator__max_features': gbr_max_features,
@@ -337,7 +338,7 @@ def main():
     print('best_score: {:}'.format(random_search.best_score_))
 
     # -- Grid Search --
-    # TODO not used, very long
+    # TODO not used, very long. Uncomment if you want to use anyways (reduce number of params to search)
     """
     grid_search = GridSearchCV(estimator = pipe,
                             param_grid = param_grid,
@@ -348,6 +349,11 @@ def main():
 
     # Fit the random search model
     grid_search.fit(data_X, data_y)
+
+    # Print results
+    print('\Grid Search results:')
+    print('best_params: {:}'.format(grid_search.best_params_))
+    print('best_score: {:}'.format(grid_search.best_score_))
     """
 
 
