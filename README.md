@@ -35,10 +35,9 @@ You can also generate the 2 other submissions `V39` and `V38`. Just go back to t
 ### Other interesting scripts to look at  
 - `train_dlnn.py`: Runs CNN model on the images with the text features.
 - `params_search.py`: Used for hyper-params search, some code is commented-out but can be uncommented to add to the params search.
-  \
-  \
-  \
-  
+<br />
+<br />
+
 ## Project structure and files  
 
 - `train_predict.py`: Use to train on Train set (`train.csv`) and predict on the Test set (`test.csv`) using simple models (Random Forest, Gradient Boost Regressor...). This uses text features only.
