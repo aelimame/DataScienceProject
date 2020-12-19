@@ -15,12 +15,12 @@ Predict the number of profile likes based on simulated social media profile info
 Important:   
 - Make sure you are using Branch `V42` and not `main`.
 - Make sure to install the exact versions of the libraries in `requirements.txt` file. The best way is to follow the Installation instructions below.  
-- Use `train_predict.py` script to generate this submission.
+- Use **`train_predict.py`** script to generate this submission.
 - The Train and Test sets assets (`train.csv`, `test.csv` and corresponding `images`) are already in the repository under `src_data`.
 
 By default, the script will read the Train and Test sets, train the models on the full Train set and predict on the Test set. It will then save the predictions csv file to the `logs` folder in `V42` sub-folder.  
 
-Optional: You can also run CV evaluation by enabling/disabling some bool flags in lines 53 and 54.  
+Optional: You can also run CV evaluation by enabling/disabling some bool flags in lines 53 and 54 in `train_predict.py`.  
 ```console
 evaluate_cv_on_train = True  
 predict_on_test = False  
@@ -35,9 +35,10 @@ You can also generate the 2 other submissions `V39` and `V38`. Just go back to t
 ### Other interesting scripts to look at  
 - `train_dlnn.py`: Runs CNN model on the images with the text features.
 - `params_search.py`: Used for hyper-params search, some code is commented-out but can be uncommented to add to the params search.
-
-
-
+  \
+  \
+  \
+  
 ## Project structure and files  
 
 - `train_predict.py`: Use to train on Train set (`train.csv`) and predict on the Test set (`test.csv`) using simple models (Random Forest, Gradient Boost Regressor...). This uses text features only.
