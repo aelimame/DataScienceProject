@@ -47,7 +47,7 @@ You can also generate the 2 other submissions `V39` and `V38`. Just go back to t
 - `utils`: Folder for utilities, data loaders, data transformer...
   - `utils\text_data_loader.py`: Helper class to load features from csv files.
   - `utils\images_loader.py`: Helper class to load images from folders. It helps with matching images with profile ids.
-  - `utils\data_transformer.py`: Helper class to transform features, it is based on SKLearn pipelines.
+  - `utils\data_transformer.py`: Helper class `HAL9001DataTransformer(BaseEstimator, TransformerMixin)` to transform features, it is based on SKLearn pipelines.
 - `Notebook-Experiences.ipynb`: Jupyter notebook for experiments and analysis.
 - `submissions`: Folder containing the prediction csv files (on the test set) submitted to Kaggle.
   - `submissions\submissions_info.csv`: Contains all the information about the submitted predictions (git code version, summary about the models used, score we got on Kaggle...).
