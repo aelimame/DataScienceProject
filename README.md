@@ -1,57 +1,139 @@
-# DataScienceProject
+# DataScienceProject: Social Media Prediction
 
-## Porject structure and files
+Predict the number of profile likes based on simulated social media profile info.  
 
-- train_predict.py: Use to train on Train set (train.csv) and predict on the Test set (test.csv) using simple models (Random Forest, Gradient Boost Regressor...). This uses text featrues only.
-- params_search.py: Use for hyper-params search, some code is commented-out but can be uncommented to add to the params search.
-- train_dlnn.py: Use this to train on text features (train.csv) and images (train_profile_images). This uses Keras DL NN models (see keras_models.py script).
-- keras_models.py: Keras models to train on text features and images
-- utils: Folder for utilities, data loaders, data transformer...
-  - utils\text_data_loader.py: Helper class to load features from csv files.
-  - utils\images_loader.py: Helper class to load images from folders. It helps with matching images with profile ids.
-  - utils\text_data_transformer.py: Helper class to transform features.
-- Notebook-Experiences.ipynb: Jupyter notebook for experiments and analysis
-- submissions: Folder containing the preditions csv files (on the test set) submitted to Kaggle
-  - submissions\submissions_info.csv: Contains all the information about the submitted predictions (git code version, summary about the models used, score we got on Kaggle...).
+### Team-23 (HAL9001)  
+* Ala Eddine Limame  
+* Corentin Moiny  
+* Dave Whipps  
+* Hugo Lapointe  
 
-Work in progress!
+
+## Running the scripts  
+
+### Kaggle submission V42 (1.59437 private score)  
+Important:   
+- Make sure you are using Branch `V42` and not `main`.
+- Make sure to install the exact versions of the libraries in `requirements.txt` file. The best way is to follow the Installation instructions below.  
+- Use **`train_predict.py`** script to generate this submission.
+- The Train and Test sets assets (`train.csv`, `test.csv` and corresponding `images`) are already in the repository under `src_data`.
+
+By default, the script will read the Train and Test sets, train the models on the full Train set and predict on the Test set. It will then save the predictions csv file to the `logs` folder in `V42` sub-folder.  
+
+Optional: You can also run CV evaluation by enabling/disabling some bool flags in lines 53 and 54 in `train_predict.py`.  
+```console
+evaluate_cv_on_train = True  
+predict_on_test = False  
+```
+Important: Please don't activate both at the same time to avoid reproducibility issues when predicting on the Test set.  
+
+### Submissions V39 and V38  
+You can also generate the 2 other submissions `V39` and `V38`. Just go back to the corresponding git version mentioned below (Tags `V38` and `V39`). And run the same script `train_predict.py`.  
+- `V39` git `SHA-1: 3153a9bb188e20db3a3bf8f039ae54db5aa690d5` (date 2020-12-14).  
+- `V38` git `SHA-1: b60f4612033ae2652dfce8d5de12c320bac55684` (date 2020-12-13).  
+  
+### Other interesting scripts to look at  
+- `train_dlnn.py`: Runs CNN model on the images with the text features.
+- `params_search.py`: Used for hyper-params search, some code is commented-out but can be uncommented to add to the params search.
+<br />
+<br />
+
+## Project structure and files  
+
+- `train_predict.py`: Use to train on Train set (`train.csv`) and predict on the Test set (`test.csv`) using simple models (Random Forest, Gradient Boost Regressor...). This uses text features only.
+- `params_search.py`: Use for hyper-params search, some code is commented-out but can be uncommented to add to the params search.
+- `train_dlnn.py`: Use this to train on text features (`train.csv`) and images (`train_profile_images`). This uses Keras DL NN models (see `keras_models.py` script).
+- `keras_models.py`: Keras models to train on text features and images.
+- `utils`: Folder for utilities, data loaders, data transformer...
+  - `utils\text_data_loader.py`: Helper class to load features from csv files.
+  - `utils\images_loader.py`: Helper class to load images from folders. It helps with matching images with profile ids.
+  - `utils\data_transformer.py`: Helper class to transform features, it is based on SKLearn pipelines.
+- `Notebook-Experiences.ipynb`: Jupyter notebook for experiments and analysis.
+- `submissions`: Folder containing the prediction csv files (on the test set) submitted to Kaggle.
+  - `submissions\submissions_info.csv`: Contains all the information about the submitted predictions (git code version, summary about the models used, score we got on Kaggle...).
+- `pipeline_graph`: Contains the dot file and generated PNG of our `DataTransformer/Pipelines` architecture.
+
+
+
+## Installation  
+  
+Highly recommend using mini-conda environments  
+```console
+$conda create --name IFT6758Kaggle python=3.6  
+$conda activate IFT6758Kaggle  
+```
+  
+Use requirements.txt to install all needed libs.  
+```console
+$pip install -r requirement.txt  
+```
+  
+For Mac OSX: brew install libomp  
+  
+
 
 ## IMPORTANT: Predictions submission
-Use train_predict.py to generate predictions on the Test set (you can try new models...).
-Before submitting the predictions, make sure to push the new/modified code to github to keep track of the code used to make the predictions. This is very important so we can reproduce the predictions and track the models used. Make sure to update the sumbmission csv file in submissions folder, add comments about the model(s) used, the features used, the new transformations done to the data and any other relevent information. Don't forget to add the prediction file itself to the subfolder submissions\pred_files. Also, name the prediction file based on the model, date, git version...
+- Use `train_predict.py` to generate predictions on the Test set (you can try new models...).  
+- Before submitting the predictions, make sure to push the new/modified code to github to keep track of the code used to make the predictions. This is very important so we can reproduce the predictions and track the models used.
+- Make sure to update the `submissions_info.csv` file in `submissions` folder, add comments about the model(s) used, the features used, the new transformations done to the data and any other relevant information.
+- Don't forget to add the prediction file itself to the subfolder `submissions\pred_files`. Also, name the prediction file based on the model, date, git version...
 
-
-## Install
-
-Use requirements.txt to install all needed libs (pip install -r requirements.txt). Highly recommend using mini-conda envirements.
-
-For Mac OSX: brew install libomp
 
 
 ## Troubleshooting
 
-If you had issue related to AsyncGeneratorItem when connecting your conda environment to jupyter use:
+If you had issue related to AsyncGeneratorItem when connecting your conda environment to jupyter use:  
 
+```console
 pip uninstall -y ipython prompt_toolkit
 pip install ipython prompt_toolkit
+```
 
-To connect your environment:
+To connect your environment:  
 
+```console
 python -m ipykernel install --user --name=<name_of_env>
+```
 
-For OS X users:
+For OS X users:  
 
-If you get a RuntimeError, something like:
+If you get a RuntimeError, something like:  
 
 RuntimeError: Python is not installed as a framework. The Mac OS X backend will not be able to function correctly if Python is not installed as a framework. See the Python documentation for more information on installing Python as a framework on Mac OS X. Please either reinstall Python as a framework, or try one of the other backends. If you are using (Ana)Conda please install python.app and replace the use of 'python' with 'pythonw'. See 'Working with Matplotlib on OSX' in the Matplotlib FAQ for more information.
 
-Add (Don't commit thoses lines):
+Add (Don't commit thoses lines):  
 
+```console
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+```
 
 
 ## Create PDF from jupyter
 
-https://pypi.org/project/notebook-as-pdf/
+https://pypi.org/project/notebook-as-pdf/  
+
+
+
+## References  
+Pipeline/transform  
+- https://towardsdatascience.com/pipelines-custom-transformers-in-scikit-learn-the-step-by-step-guide-with-python-code-4a7d9b068156  
+- https://towardsdatascience.com/pipelines-custom-transformers-in-scikit-learn-ef792bbb3260  
+- https://towardsdatascience.com/custom-transformers-and-ml-data-pipelines-with-python-20ea2a7adb65  
+- https://scikit-learn.org/stable/auto_examples/preprocessing/plot_map_data_to_normal.html#sphx-glr-auto-examples-preprocessing-plot-map-data-to-normal-py  
+  
+Hyper-params  
+- https://scikit-learn.org/stable/modules/grid_search.html#grid-search  
+- https://towardsdatascience.com/hyperparameter-tuning-the-random-forest-in-python-using-scikit-learn-28d2aa77dd74  
+  
+Outliers  
+- https://machinelearningmastery.com/how-to-use-statistics-to-identify-outliers-in-data/  
+- https://machinelearningmastery.com/robust-scaler-transforms-for-machine-learning/  
+  
+Imputation  
+- https://machinelearningmastery.com/statistical-imputation-for-missing-values-in-machine-learning/  
+  
+Others  
+TODO  
+
