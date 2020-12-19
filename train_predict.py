@@ -365,7 +365,7 @@ def main():
         # done to the data and any other relevent information. Don't forget
         # to add the prediction file itself to the subfolder submissions\pred_files.
         # Also, name the prediction file based on the model, date, git version...
-        test_tosubmit_folder = os.path.join(log_folder,'V42-VotBag10GbrXgbLgbm+SrvBag20-OutlrIQR-Ovr200KLikeRmoved')
+        test_tosubmit_folder = os.path.join(log_folder,'V42')
         # Create log folder if does not exist
         if not Path(test_tosubmit_folder).exists():
             os.mkdir(test_tosubmit_folder)

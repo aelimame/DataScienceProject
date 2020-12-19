@@ -176,7 +176,9 @@ def main():
     bagging_gbm = BaggingRegressor(base_estimator=gbm, n_estimators=num_bagging_estimators, random_state=random_seed, warm_start=False)
 
     # SVM Regressor
-    svr_model = SVR(degree=3)#4)
+    svr_model = SVR(degree=3#,
+                    #C = 3.5
+                    )
 
     # Adaboost
 #    adabr_model = AdaBoostRegressor()
@@ -192,7 +194,7 @@ def main():
     pipe = create_pipeline(use_scaling_for_y=True,
                            data_transformer=data_transformer,
                            feature_selector=feature_selector,
-                           regressor=svr_model)#voting_regressor)
+                           regressor=svr_model)#voting_regressor) # TODO use all regressor or any single model you want to evaluate
 
 
     # --  Outliers removal k-fold CV evaluation --

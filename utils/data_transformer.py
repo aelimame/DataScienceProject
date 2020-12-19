@@ -3,6 +3,7 @@ import numpy as np
 import random
 import pandas as pd
 import os
+
 # Fix random seeds, Same one to be used everywhere
 random_seed = 42
 os.environ['PYTHONHASHSEED']=str(random_seed)
@@ -20,6 +21,9 @@ from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 from sklearn.pipeline import FeatureUnion, Pipeline
 from sklearn.exceptions import NotFittedError
+from sklearn.decomposition import PCA
+
+import cv2
 
 # TODO: Maybe remove this and use SimpleImputer?
 from utils.missing_values_filler import MissingValuesFiller
@@ -31,6 +35,13 @@ DEFAULT_NUM_USR_TZONES_TO_FEATUREIZE = 10
 DEFAULT_NUM_UTC_TO_FEATUREIZE = 15
 UTC_FOR_NA_VALUES = 10000000 # Define high value to give unique category to nan values
 N_DECIMALS = 7
+
+N_COMPONENTS_IMAGE_PCA = 150
+
+# Names for acces to data in Dict (to be used with model inputs/output for better referencing)
+IMAGE_INPUT_NAME = 'image'
+TEXT_FEATURES_INPUT_NAME = 'text_features'
+OUTPUT_NAME = 'likes'
 
 
 # Custom Transformer that modifies colour columns
@@ -355,7 +366,96 @@ class NumericalTransformer( BaseEstimator, TransformerMixin ):
 
         return X[feature_names_to_return].values
 
-# HAL9001DataTransformer: Wrapper to call all the transfomers
+# Custom Transformer that adds image features
+class ImageTransformer( BaseEstimator, TransformerMixin ):
+    def __init__( self, feature_names ):
+        self._in_feature_names = feature_names
+        self._out_feature_names = []
+        self.scaler = StandardScaler()
+        self.pca = PCA(n_components=N_COMPONENTS_IMAGE_PCA)
+        self.do_pca = False # If true 
+
+    def fit( self, X, y = None ):
+        X = X.copy()
+
+        if self.do_pca:
+            # Flatten images to 1d array
+            images_data = np.array(X.Images.tolist())
+            img_array_flat_shape = images_data.shape[1] * images_data.shape[2] *images_data.shape[3]
+            images_data = images_data.reshape(images_data.shape[0],img_array_flat_shape)
+            self.scaler.fit(images_data)
+            images_data = self.scaler.transform(images_data)
+            self.pca.fit(images_data)
+#        else:
+#            images_data = np.array(X.Images.tolist())
+#            images_h_data = []
+#            for image in images_data:
+#                hog = cv2.HOGDescriptor()
+#                im = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+#                hist = hog.compute(im)
+#                images_h_data += [hist]
+
+        return self
+
+    def transform( self, X, y = None ):
+        # Force copy so we don't change X inplace
+        X = X.copy()
+        
+        if self.do_pca:
+            # Flatten images to 1d array
+            images_data = np.array(X.Images.tolist())
+            img_array_flat_shape = images_data.shape[1] * images_data.shape[2] *images_data.shape[3]
+            images_data = images_data.reshape(images_data.shape[0],img_array_flat_shape)
+            images_data = self.scaler.transform(images_data)
+            images_data = self.pca.transform(images_data)
+        else:
+            images_data = np.array(X.Images.tolist())
+#            winSize = (8,16)
+#            blockSize = (4,4)
+#            blockStride = (2,2)
+#            cellSize = (2,2)
+#            nbins = 9
+#            hog = cv2.HOGDescriptor(winSize, blockSize, blockStride, cellSize, 9)
+
+            img_dim1 = images_data.shape[1]
+            img_dim2 = images_data.shape[2]
+            # Ref: https://stackoverflow.com/questions/44972099/opencv-hog-features-explanation
+            cell_size = (16, 16)  # h x w in pixels
+            block_size = (2, 2)  # h x w in cells
+            nbins = 9  # number of orientation bins
+            #hog = cv2.HOGDescriptor(winSize, blockSize, blockStride, cellSize, 9)
+            hog = cv2.HOGDescriptor((img_dim1 // cell_size[1] * cell_size[1], img_dim2 // cell_size[0] * cell_size[0]), # winSize
+                                    (block_size[1] * cell_size[1], block_size[0] * cell_size[0]), # blockSize
+                                    (cell_size[1], cell_size[0]), # blockStride
+                                    (cell_size[1], cell_size[0]), # cellSize
+                                    nbins) # nbins
+
+            # Dummy run to just get the size of the hist
+            image = images_data[0]
+            image = np.clip((image*255), a_min=0, a_max=255).astype(np.uint8)
+            im = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)#cv2.COLOR_RGB2GRAY)
+            hist = hog.compute(im)
+
+            # Init empty array with right hit size as 
+            hist_size = hist.shape[0]
+            print('CV2 HOG hist_size: {:}'.format(hist_size))
+            images_h_data = np.empty((0,hist_size))
+            
+            # Run on all images
+            for image in images_data:
+                image = np.clip((image*255), a_min=0, a_max=255).astype(np.uint8)
+                im = cv2.cvtColor(image, cv2.COLOR_RGB2BGR) #cv2.COLOR_RGB2BGR)  cv2.COLOR_RGB2BGR)
+                hist = hog.compute(im)
+                hist = hist.reshape(1, -1)
+                images_h_data = np.concatenate((images_h_data, hist), axis=0)
+
+        self._out_feature_names = self._in_feature_names
+
+        return images_h_data
+
+
+
+# HAL9001DataTransformer: Wrapper to call all the transfomers/pipelines
 class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
     def __init__(self,
                  enable_binary_features = True,
@@ -364,6 +464,7 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
                  enable_textual_features = True,
                  enable_categorical_features = True,
                  enable_datetime_features = True,
+                 enable_image_features = False, # Disabled by default
                  num_languages_to_featureize = DEFAULT_NUM_LANGUAGES_TO_FEATUREIZE,
                  num_tzones_to_featureize = DEFAULT_NUM_USR_TZONES_TO_FEATUREIZE,
                  num_utc_to_featureize = DEFAULT_NUM_UTC_TO_FEATUREIZE,
@@ -378,6 +479,7 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
         self.enable_textual_features = enable_textual_features
         self.enable_categorical_features = enable_categorical_features
         self.enable_datetime_features = enable_datetime_features
+        self.enable_image_features = enable_image_features
         self.num_languages_to_featureize = num_languages_to_featureize
         self.num_tzones_to_featureize = num_tzones_to_featureize
         self.num_utc_to_featureize = num_utc_to_featureize
@@ -465,6 +567,13 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
                                                          #('num_scaler', RobustScaler())
                                                         ])
 
+        # Image features and pipeline
+        if self.enable_image_features:
+            image_features = ['Profile Image']
+            image_pipleline = Pipeline(steps = [ ('image_transformer', ImageTransformer(image_features)),
+                                                 ('image_scaler', RobustScaler())
+                                                ])
+
         # Combining numerical and categorical piepline into one full big pipeline horizontally
         # using FeatureUnion
         transformer_list = []
@@ -499,22 +608,56 @@ class HAL9001DataTransformer(BaseEstimator, TransformerMixin):
 
         self.all_features_transformer = FeatureUnion(transformer_list = transformer_list)
 
+        # Images are treaded seperately
+        if self.enable_image_features:
+            self.images_features_transformer = image_pipleline#[('image_pipleline', image_pipleline)]
+
+
     def fit(self, X, y = None):
+        
+        if self.enable_image_features:
+            data_images_X = X[['Images']]
+            data_X = X.drop(columns ='Images')
+        else:
+            data_X = X
+
         # Force copy so we don't change X inplace
         if self.copy:
-            X = X.copy()
-        self.all_features_transformer.fit(X)
+            data_X = data_X.copy()
+            if self.enable_image_features:
+                data_images_X = data_images_X.copy()
+
+        self.all_features_transformer.fit(data_X)
+        if self.enable_image_features:
+            self.images_features_transformer.fit(data_images_X)
         self.has_been_fit = True
         return self
 
+
     def transform(self, X, y = None):
+
         if self.has_been_fit:
+            if self.enable_image_features:
+                data_images_X = X[['Images']]
+                data_X = X.drop(columns ='Images')
+            else:
+                data_X = X
+
             # Force copy so we don't change X inplace
             if self.copy:
-                X = X.copy()
+                data_X = data_X.copy()
+                if self.enable_image_features:
+                    data_images_X = data_images_X.copy()
 
             transf_X = self.all_features_transformer.transform(X)
-            return transf_X
+            if self.enable_image_features:
+                transf_image_X = self.images_features_transformer.transform(data_images_X)
+                all_X = np.concatenate((transf_X, transf_image_X), axis=1)
+                return all_X
+            else:
+                return transf_X
+            
+            
         else:
             msg = ("This %(name)s instance is not fitted yet. Call 'fit' with "
                    "appropriate arguments before using this estimator.")
